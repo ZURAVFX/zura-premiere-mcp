@@ -47,7 +47,7 @@ function defaultRunInstaller(platform: NodeJS.Platform, projectRoot: string): vo
   if ((platform === "win32" || platform === "darwin") && !existsSync(script)) {
     throw new Error(
       "The Premiere panel installer is not bundled here (the Claude Desktop extension omits scripts/). "
-      + "Install the Zura Premiere Reels Codex plugin and run its setup skill to install the panel.",
+      + "Install the Zura Premiere MCP from its source repository and run its setup script to install the panel.",
     );
   }
   if (platform === "win32") {

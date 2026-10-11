@@ -8,7 +8,7 @@
  * source other than Adobe, then your use, modification, or distribution of it requires the prior
  * written permission of Adobe.
  *
- * CSInterface.js - v12.0.0 (minimal shim for Zura Premiere Reels)
+ * CSInterface.js - v12.0.0 (minimal shim for Zura Premiere MCP)
  * Download the full version from: https://github.com/nicscott9/CSInterface
  **************************************************************************************************/
 

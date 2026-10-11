@@ -509,21 +509,21 @@ function heartbeatFailure(liveness: BridgeLiveness, hostLabel = "Premiere Pro", 
     return {
       success: false,
       error:
-        `The Zura panel is open but not running. In ${hostLabel}, open Window > Extensions > Zura Premiere Reels, wait for it to finish starting, then retry once.`,
+        `The Zura panel is open but not running. In ${hostLabel}, open Window > Extensions > Zura Premiere MCP, wait for it to finish starting, then retry once.`,
     };
   }
   if (liveness.state === "stale") {
     return {
       success: false,
       error:
-        `The Zura panel heartbeat is stale. Reopen Window > Extensions > Zura Premiere Reels in ${hostLabel}, dismiss any blocking dialog, and retry once after it reports running.`,
+        `The Zura panel heartbeat is stale. Reopen Window > Extensions > Zura Premiere MCP in ${hostLabel}, dismiss any blocking dialog, and retry once after it reports running.`,
     };
   }
   if (requireHeartbeat && liveness.state === "unknown") {
     return {
       success: false,
       error:
-        `${hostLabel} is not running the Zura panel (no heartbeat). Open ${hostLabel}, then Window > Extensions > Zura Premiere Reels, and retry. No command was sent.`,
+        `${hostLabel} is not running the Zura panel (no heartbeat). Open ${hostLabel}, then Window > Extensions > Zura Premiere MCP, and retry. No command was sent.`,
     };
   }
   return null;
@@ -775,7 +775,7 @@ async function pollForResponse(
               ? `${hostLabel} accepted the edit but stopped responding; the timeline state is unknown and ${hostLabel} may still be applying it. Wait until the host is idle, inspect the timeline, then decide whether a retry is safe.`
               :
               `The CEP panel appears stuck: its busy marker for this command has not changed for ${Math.round(busyAgeMs / 1000)} s. ` +
-              `Reload it in ${hostLabel} (Window > Extensions > Zura Premiere Reels). ` +
+              `Reload it in ${hostLabel} (Window > Extensions > Zura Premiere MCP). ` +
               (mutating ? `The mutation outcome is unknown; inspect ${hostLabel} before retrying.` : `The command may or may not have run; check ${hostLabel} before retrying.`),
             ...(mutating ? { data: { mutationOutcome: "unknown", timelineChanged: null } } : {}),
           });

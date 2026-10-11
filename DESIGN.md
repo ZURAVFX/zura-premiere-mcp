@@ -2,16 +2,16 @@
 
 ## Surface
 
-Premiere Pro CEP panel for connecting Zura to Codex. Mode: Operate.
+Premiere Pro CEP panel for checking the local MCP connector. Mode: Operate.
 
 ## Visual direction
 
-Use the supplied dark, compact, card-based reference. Start with a near-black canvas and restrained charcoal surfaces. Use the official OA Energetic Green `#AFFF41` for the Zura mark, active connection states, and primary actions. Use Off White `#EAEAEA` for primary text. Keep borders and secondary text in quiet neutral shades derived from the core palette.
+Use the supplied dark, compact, card-based reference. Start with a near-black canvas and restrained charcoal surfaces. Use Zura Energetic Green `#AFFF41` for the Zura mark, active connection states, and primary actions. Use Off White `#EAEAEA` for primary text. Keep borders and secondary text in quiet neutral shades derived from the core palette.
 
 ## Hierarchy
 
 1. Show whether the Premiere connector is running, using a clear state label and one next step.
-2. Tell the user how to start: attach footage in Codex and mention Zura Premiere Reels.
+2. Show the MCP command and tell the user to connect from their MCP client.
 3. Keep bridge paths, manual start/stop, troubleshooting details, and logs behind an Advanced disclosure.
 
 ## Constraints

@@ -1,7 +1,6 @@
-# MCP for Adobe Premiere Pro Setup Guide for AI Assistants
+# Zura Premiere MCP Setup Guide for AI Clients
 
-Use this file as a portable, client-neutral setup and operating guide for [MCP for
-Adobe Premiere Pro](https://github.com/leancoderkavy/premiere-pro-mcp). Download it, attach it
+Use this file as a portable, client-neutral setup and operating guide for [Zura Premiere MCP](https://github.com/ZURAVFX/zura-premiere-mcp). Download it, attach it
 to any AI conversation that accepts files or project instructions, and ask the
 assistant to follow the **Assistant operating rules** below.
 
@@ -24,11 +23,15 @@ first.
 
 ## Universal local setup
 
-Install the published package and its Premiere connector:
+Install the MCP and Premiere connector from the public source repository:
 
 ```bash
-npm install -g premiere-pro-mcp
-premiere-pro-mcp --install-cep
+git clone https://github.com/ZURAVFX/zura-premiere-mcp.git
+cd zura-premiere-mcp
+npm ci
+npm run build
+npm install --global .
+npm run install-cep
 ```
 
 Add this server configuration in the client's MCP settings. The exact settings
@@ -38,8 +41,8 @@ location with this server entry:
 ```json
 {
   "mcpServers": {
-    "premiere-pro": {
-      "command": "premiere-pro-mcp"
+    "zura-premiere-mcp": {
+      "command": "zura-premiere-mcp"
     }
   }
 }
@@ -51,9 +54,9 @@ from a source build instead:
 ```json
 {
   "mcpServers": {
-    "premiere-pro": {
+    "zura-premiere-mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/premiere-pro-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/zura-premiere-mcp/dist/index.js"]
     }
   }
 }
@@ -61,56 +64,25 @@ from a source build instead:
 
 Build the source checkout with `npm ci` followed by `npm run build` before
 using the source-build configuration. Then restart Premiere, open a project,
-and open **Window > Extensions > MCP for Adobe Premiere Pro**.
+and open **Window > Extensions > Zura Premiere MCP**.
 
-## Client specific convenience paths
+## Configure an MCP client
 
-The universal setup above applies to every MCP-compatible client. These options
-are conveniences for clients that support the repository's packaged extension
-or plugin format.
+The source setup above applies to any stdio MCP client. Use the command printed
+by `zura-premiere-mcp --print-client-config <client>` for clients supported by
+that helper, or add the following server entry to the client's MCP settings:
 
-### Claude Desktop
-
-1. Open the [latest release](https://github.com/leancoderkavy/premiere-pro-mcp/releases/latest)
-   and download both the `premiere-pro-mcp-<version>.mcpb` bundle and the
-   `MCPBridgeCEP.zxp` Premiere connector.
-2. In Claude Desktop, choose **Settings > Extensions > Advanced settings >
-   Install Extension**, select the `.mcpb` file, and restart Claude Desktop.
-3. Install `MCPBridgeCEP.zxp` with a trusted ZXP installer. If a ZXP installer
-   is unavailable, install the connector with the universal npm command above.
-
-The Claude Desktop bundle contains the MCP server. The Premiere connector is
-still a required, separate installation.
-
-### Codex
-
-From a clone of this repository, install the bundled Codex plugin and then the
-Premiere connector:
-
-```bash
-codex plugin marketplace add .
-codex plugin add premiere-pro@premiere-pro-mcp
-npx -y premiere-pro-mcp@1.14.7 --install-cep
+```json
+{
+  "mcpServers": {
+    "zura-premiere-mcp": {
+      "command": "zura-premiere-mcp"
+    }
+  }
+}
 ```
 
-Restart Premiere Pro and start a new Codex session after installation. The
-plugin starts the local server with `npx`; the CEP connector is what lets that
-server communicate with the running Premiere application.
-
-### Claude Code
-
-In Claude Code, add this repository's marketplace and install the plugin:
-
-```text
-/plugin marketplace add leancoderkavy/premiere-pro-mcp
-/plugin install premiere-pro@premiere-pro-mcp
-```
-
-Then install the Premiere connector and start a new Claude Code session:
-
-```bash
-npx -y premiere-pro-mcp@1.14.7 --install-cep
-```
+Restart the MCP client after saving its configuration.
 
 ## Verify before any edit
 
@@ -127,7 +99,7 @@ project, or active-sequence issue first. For a local package and configuration
 diagnostic, run:
 
 ```bash
-premiere-pro-mcp --doctor
+zura-premiere-mcp --doctor
 ```
 
 Once the connection check succeeds, ask the assistant to run
@@ -152,7 +124,7 @@ must confirm that it will:
 Suggested acknowledgment:
 
 ```text
-I have read the MCP for Adobe Premiere Pro setup guide. I will first verify the local
+I have read the Zura Premiere MCP setup guide. I will first verify the local
 connection without making changes, propose a bounded plan before any edit, and
 wait for your explicit approval. I will report what Premiere verifies and any
 remaining limitations.
@@ -209,8 +181,8 @@ approval.
 
 - Fully quit Premiere before installing, removing, or refreshing the CEP
   connector; restart Premiere after the operation.
-- On Windows, the default bridge is under `%LOCALAPPDATA%\Adobe\ZuraPremiereReelsMCP\bridge`,
-  outside the shared Temp tree. Other platforms use the per-user system temp folder.
+- On Windows, the default bridge is in a private per-user Adobe application-data
+  folder, outside the shared Temp tree. Other platforms use the per-user system temp folder.
   The default local bridge directory normally needs no configuration. If
   `PREMIERE_TEMP_DIR` is overridden, set the same absolute path in both the MCP
   server and the Premiere connector. Do not reuse a Windows path on macOS or
@@ -220,8 +192,8 @@ approval.
 - For a global npm installation, check for and apply an update with:
 
   ```bash
-  premiere-pro-mcp --check-update
-  premiere-pro-mcp --update
+  zura-premiere-mcp --check-update
+  zura-premiere-mcp --update
   ```
 
   After updating, restart both Premiere and the MCP client, then repeat the
@@ -236,4 +208,4 @@ approval.
 - [Supported actions and capability boundaries](docs/supported-actions.md)
 - [English quick start](docs/quickstart/en.md)
 - [Security policy](SECURITY.md)
-- [Issue tracker and support](https://github.com/leancoderkavy/premiere-pro-mcp/issues)
+- [Issue tracker and support](https://github.com/ZURAVFX/zura-premiere-mcp/issues)

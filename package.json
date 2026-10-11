@@ -162,11 +162,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ZURAVFX/zura-premiere-reels.git"
+    "url": "git+https://github.com/ZURAVFX/zura-premiere-mcp.git"
   },
-  "homepage": "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels",
+  "homepage": "https://github.com/ZURAVFX/zura-premiere-mcp",
   "bugs": {
-    "url": "https://github.com/ZURAVFX/zura-premiere-reels/issues"
+    "url": "https://github.com/ZURAVFX/zura-premiere-mcp/issues"
   },
   "author": "Zura",
   "private": true,
@@ -194,7 +194,7 @@
     "creative-cloud",
     "premiere-pro-plugin",
     "claude-code",
-    "zura-premiere-reels",
+    "zura-premiere-mcp",
     "adobe-premiere-mcp",
     "premiere-mcp",
     "video-editing-mcp",

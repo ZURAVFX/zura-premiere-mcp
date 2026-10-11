@@ -21,7 +21,7 @@ if (-not $resolvedDestination.StartsWith($resolvedCepRoot + [System.IO.Path]::Di
   throw "Refusing to install outside the CEP extensions directory: $resolvedDestination"
 }
 
-Write-Host "=== $(if ($isAfterEffects) { 'After Effects' } else { 'Zura Premiere Reels' }) panel ==="
+Write-Host "=== $(if ($isAfterEffects) { 'After Effects' } else { 'Zura Premiere MCP' }) panel ==="
 Write-Host "Source:      $pluginSource"
 Write-Host "Destination: $pluginDestination"
 if ($Diagnose) {
@@ -131,7 +131,7 @@ if ($problems.Count -gt 0) {
   Write-Host "Next steps:"
   Write-Host "  1. Fully quit $(if ($isAfterEffects) { 'After Effects' } else { 'Premiere Pro' })."
   Write-Host "  2. Run the Connector installer again."
-  Write-Host "  3. Reopen $(if ($isAfterEffects) { 'After Effects, then choose Window > Extensions > MCP for Adobe After Effects.' } else { 'Premiere Pro, then choose Window > Extensions > Zura Premiere Reels.' })"
+  Write-Host "  3. Reopen $(if ($isAfterEffects) { 'After Effects, then choose Window > Extensions > MCP for Adobe After Effects.' } else { 'Premiere Pro, then choose Window > Extensions > Zura Premiere MCP.' })"
   exit 1
 }
 
@@ -142,6 +142,6 @@ if ($Diagnose) {
   Write-Host "Next: Open $(if ($isAfterEffects) { 'After Effects and run Verify After Effects connection.' } else { 'Premiere Pro and run Verify Premiere connection.' })"
 }
 else {
-  Write-Host "Connector installed. Fully restart $(if ($isAfterEffects) { 'After Effects, then open Window > Extensions > MCP for Adobe After Effects.' } else { 'Premiere Pro, then open Window > Extensions > Zura Premiere Reels.' })"
+  Write-Host "Connector installed. Fully restart $(if ($isAfterEffects) { 'After Effects, then open Window > Extensions > MCP for Adobe After Effects.' } else { 'Premiere Pro, then open Window > Extensions > Zura Premiere MCP.' })"
   Write-Host "After that, ask your AI assistant to run '$(if ($isAfterEffects) { 'Verify After Effects connection' } else { 'Verify Premiere connection' })' before editing."
 }

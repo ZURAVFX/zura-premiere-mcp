@@ -1,11 +1,11 @@
 # GPT-6 Sol and GPT-6 Luna workflows
 
-Premiere Pro MCP gives GPT-6 Sol and GPT-6 Luna access to Premiere through
+Zura Premiere MCP gives GPT-6 Sol and GPT-6 Luna access to Premiere through
 structured tools, local evidence, and reviewed edit workflows. Model selection
 belongs to the client: start Codex with `codex --model gpt-6-sol` or
 `codex --model gpt-6-luna` after installing the
-[Codex plugin and connector](../README.md#codex-plugin). Model access depends on
-your account. The server does not run an OpenAI model itself.
+[local MCP setup](../README.md#source-setup). Model access depends on your
+account. The server does not run an OpenAI model itself.
 
 Neither model is required. Compatible clients can keep using GPT-6 Astra or
 another available model with the same MCP tools.

@@ -1,6 +1,6 @@
-# Zura Premiere Reels for Claude Desktop
+# Zura Premiere MCP for Claude Desktop
 
-`zura-premiere-reels-<version>.mcpb` is the one-file Claude Desktop extension.
+`zura-premiere-mcp-<version>.mcpb` is the one-file Claude Desktop extension.
 It packages the server and its production dependencies, so an editor does not
 need to install Node.js, npm, or edit an MCP JSON file. Claude Desktop supplies
 the Node runtime when it launches the local stdio server.
@@ -23,7 +23,7 @@ stages only production dependencies with `npm ci --omit=dev`, validates the
 staged manifest with the pinned `@anthropic-ai/mcpb` CLI, and writes:
 
 ```text
-artifacts/zura-premiere-reels-<version>.mcpb
+artifacts/zura-premiere-mcp-<version>.mcpb
 ```
 
 `node scripts/validate-distribution.mjs --claude` is the fast manifest and

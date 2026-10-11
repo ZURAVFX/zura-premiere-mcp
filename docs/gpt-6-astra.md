@@ -1,10 +1,10 @@
 # GPT-6 Astra workflows
 
-Premiere Pro MCP gives Astra access to Premiere through structured tools, local
+Zura Premiere MCP gives Astra access to Premiere through structured tools, local
 evidence, and reviewed edit workflows. Model selection belongs to the client:
 start Codex with `codex --model gpt-6-astra` after installing the
-[Codex plugin and connector](../README.md#codex-plugin). Model access depends on
-your account. The server does not run an OpenAI model itself.
+[local MCP setup](../README.md#source-setup). Model access depends on your
+account. The server does not run an OpenAI model itself.
 
 ## Discover the right operation
 

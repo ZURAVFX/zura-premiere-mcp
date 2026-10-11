@@ -1,19 +1,24 @@
+param([string]$OutputPath)
+
 $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
-$pluginRoot = Join-Path $root "plugins\zura-premiere-reels"
-$assetRoot = Join-Path $pluginRoot "assets"
-$bundlePath = Join-Path $assetRoot "zura-premiere-mcp-source.zip"
-$tempBundlePath = Join-Path $assetRoot ([guid]::NewGuid().ToString("N") + ".tmp.zip")
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+  $OutputPath = Join-Path $root "dist\zura-premiere-mcp-source.zip"
+} elseif (-not [System.IO.Path]::IsPathRooted($OutputPath)) {
+  $OutputPath = Join-Path $root $OutputPath
+}
+$outputDirectory = Split-Path -Parent $OutputPath
+New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
+$tempBundlePath = Join-Path $outputDirectory ([guid]::NewGuid().ToString("N") + ".tmp.zip")
 $rootFiles = @("package.json", "package-lock.json", "tsconfig.json", "README.md", "LICENSE", "CHANGELOG.md", "public-product-manifest.json")
-$sourceDirectories = @("src", "scripts", "cep-plugin", "after-effects-cep-plugin", "uxp-plugin", "benchmarks\uxp-hybrid", "docs", "skills\zura-premiere-reels")
+$sourceDirectories = @("src", "scripts", "cep-plugin", "after-effects-cep-plugin", "uxp-plugin", "benchmarks\uxp-hybrid", "docs")
 $files = [System.Collections.Generic.Dictionary[string, System.IO.FileInfo]]::new([System.StringComparer]::Ordinal)
 
 foreach ($relativePath in $rootFiles) {
   $fullPath = Join-Path $root $relativePath
   if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
-    $key = $relativePath.Replace("\", "/")
-    $files[$key] = Get-Item -LiteralPath $fullPath
+    $files[$relativePath.Replace("\", "/")] = Get-Item -LiteralPath $fullPath
   }
 }
 
@@ -30,7 +35,7 @@ foreach ($relativeDirectory in $sourceDirectories) {
 if (-not $files.ContainsKey("package.json") -or -not $files.ContainsKey("package-lock.json")) {
   throw "The Zura source bundle requires package.json and package-lock.json."
 }
-New-Item -ItemType Directory -Force -Path $assetRoot | Out-Null
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $stream = [System.IO.File]::Open($tempBundlePath, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
 try {
@@ -59,27 +64,17 @@ try {
     "src/index.ts",
     "cep-plugin/CSXS/manifest.xml",
     "scripts/install-cep.ps1",
-    "skills/zura-premiere-reels/scripts/install.ps1"
+    "scripts/install-zura-premiere-mcp.ps1"
   )
   $missing = @($requiredEntries | Where-Object { -not $entries.Contains($_) })
   if ($missing.Count -gt 0) { throw "Source bundle is missing required files: $($missing -join ', ')" }
-  $forbidden = @($entries | Where-Object { $_ -match "(^|/)(node_modules|\.git|dist|build|coverage)(/|$)" })
-  if ($forbidden.Count -gt 0) { throw "Source bundle contains generated or development files: $($forbidden -join ', ')" }
+  $forbidden = @($entries | Where-Object { $_ -match "(^|/)(node_modules|\.git|dist|build|coverage|plugins|skills)(/|$)" })
+  if ($forbidden.Count -gt 0) { throw "Source bundle contains generated or workflow-plugin files: $($forbidden -join ', ')" }
 }
 finally { $zip.Dispose() }
 
-[System.IO.File]::Copy($tempBundlePath, $bundlePath, $true)
+[System.IO.File]::Copy($tempBundlePath, $OutputPath, $true)
 [System.IO.File]::Delete($tempBundlePath)
-$legacyBundle = Join-Path $assetRoot "premiere-reels-source.zip"
-if (Test-Path -LiteralPath $legacyBundle -PathType Leaf) {
-  $resolvedAssetRoot = (Resolve-Path -LiteralPath $assetRoot).Path.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-  $resolvedLegacy = [System.IO.Path]::GetFullPath($legacyBundle)
-  if (-not $resolvedLegacy.StartsWith($resolvedAssetRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "Refusing to remove an unexpected legacy bundle path: $resolvedLegacy"
-  }
-  [System.IO.File]::Delete($resolvedLegacy)
-}
-
-$hash = (Get-FileHash -LiteralPath $bundlePath -Algorithm SHA256).Hash.ToLowerInvariant()
-$size = (Get-Item -LiteralPath $bundlePath).Length
-Write-Host "Built $bundlePath ($size bytes, $($files.Count) files, SHA-256 $hash)"
+$hash = (Get-FileHash -LiteralPath $OutputPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$size = (Get-Item -LiteralPath $OutputPath).Length
+Write-Host "Built $OutputPath ($size bytes, $($files.Count) files, SHA-256 $hash)"

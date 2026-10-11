@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "zura-premiere-reels.public-product.v1",
+  "schemaVersion": "zura-premiere-mcp.public-product.v1",
   "generatedFrom": {
     "evidenceScope": "source_checkout_not_published_package",
     "releaseMetadata": "release-metadata.json",
@@ -7,13 +7,13 @@
     "registryMetadata": "registry/server.json"
   },
   "product": {
-    "name": "Zura Premiere Reels",
+    "name": "Zura Premiere MCP",
     "mcpName": "io.github.zuravfx/zura-premiere",
     "localPackage": "zura-premiere-mcp",
-    "distribution": "private_codex_marketplace",
+    "distribution": "public_source_repository",
     "version": "1.23.0",
-    "repository": "https://github.com/ZURAVFX/zura-premiere-reels",
-    "homepage": "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels",
+    "repository": "https://github.com/ZURAVFX/zura-premiere-mcp",
+    "homepage": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "license": "MIT",
     "localFirst": true,
     "transport": "stdio"

@@ -1,10 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.zuravfx/zura-premiere",
-  "title": "Zura Premiere Reels",
-  "description": "Local-first Premiere Pro editing through the Zura Premiere Reels Codex plugin and panel.",
+  "title": "Zura Premiere MCP",
+  "description": "Local-first MCP server and connector for editing Adobe Premiere Pro projects.",
   "repository": {
-    "url": "https://github.com/ZURAVFX/zura-premiere-reels",
+    "url": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "source": "github"
   },
   "version": "1.23.0",

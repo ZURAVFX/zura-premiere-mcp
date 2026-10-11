@@ -1,5 +1,5 @@
 param(
-  [string]$RepositoryUrl = "https://github.com/ZURAVFX/zura-premiere-reels.git",
+  [string]$RepositoryUrl = "https://github.com/ZURAVFX/zura-premiere-mcp.git",
   [switch]$PluginManaged
 )
 
@@ -9,29 +9,23 @@ function Require-NativeSuccess([string]$Action) {
   if ($LASTEXITCODE -ne 0) { throw "$Action failed with exit code $LASTEXITCODE." }
 }
 
-function Get-RepoRootFromSkill([string]$SkillScriptsPath) {
-  if ([string]::IsNullOrWhiteSpace($SkillScriptsPath)) { return $null }
-  $candidate = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $SkillScriptsPath))
-  $candidatePackage = Join-Path $candidate "package.json"
-  if (Test-Path -LiteralPath $candidatePackage) {
-    try {
-      $metadata = Get-Content -LiteralPath $candidatePackage -Raw -Encoding UTF8 | ConvertFrom-Json
-      if ($metadata.name -eq "zura-premiere-mcp" -and
-          (Test-Path -LiteralPath (Join-Path $candidate "skills\zura-premiere-reels\SKILL.md"))) {
-        return $candidate
-      }
-    } catch { return $null }
+function Find-SourceRoot([string]$ScriptsPath) {
+  if ([string]::IsNullOrWhiteSpace($ScriptsPath)) { return $null }
+  $candidate = Split-Path -Parent $ScriptsPath
+  if ((Test-Path -LiteralPath (Join-Path $candidate "package.json")) -and
+      (Test-Path -LiteralPath (Join-Path $candidate "src\index.ts"))) {
+    return (Resolve-Path -LiteralPath $candidate).Path
   }
   return $null
 }
 
 $localAppData = $env:LOCALAPPDATA
-if (-not $localAppData) { throw "LOCALAPPDATA is not set; cannot choose a per-user Premiere install location." }
-$installDirectory = Join-Path $localAppData "Adobe\ZuraPremiereReelsMCP"
+if (-not $localAppData) { throw "LOCALAPPDATA is not set; cannot choose a per-user install location." }
+$installDirectory = Join-Path $localAppData "Adobe\ZuraPremiereMCP"
 $sourceRecord = Join-Path $installDirectory "source-root.txt"
 New-Item -ItemType Directory -Force -Path $installDirectory | Out-Null
 
-$repoRoot = Get-RepoRootFromSkill $PSScriptRoot
+$repoRoot = Find-SourceRoot $PSScriptRoot
 if (-not $repoRoot -and (Test-Path -LiteralPath $sourceRecord)) {
   $recordedRoot = (Get-Content -LiteralPath $sourceRecord -Raw -Encoding UTF8).Trim()
   if ($recordedRoot -and (Test-Path -LiteralPath (Join-Path $recordedRoot "package.json"))) {
@@ -45,7 +39,7 @@ if (-not $repoRoot) {
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
     if (-not $git) {
       $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-      if (-not $winget) { throw "Git for Windows is required to download the Zura Premiere MCP source. Install Git or winget, then run setup again." }
+      if (-not $winget) { throw "Git for Windows is required to download the Zura Premiere MCP source. Install Git or WinGet, then run setup again." }
       & $winget.Source install --id Git.Git --exact --accept-package-agreements --accept-source-agreements --silent
       Require-NativeSuccess "Installing Git for Windows"
       $gitCandidates = @(
@@ -65,9 +59,9 @@ if (-not $repoRoot) {
 
 $repoRoot = (Resolve-Path -LiteralPath $repoRoot).Path
 $packagePath = Join-Path $repoRoot "package.json"
-if (-not (Test-Path -LiteralPath $packagePath)) { throw "MCP package.json not found in $repoRoot." }
+if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) { throw "MCP package.json not found in $repoRoot." }
 $package = Get-Content -LiteralPath $packagePath -Raw -Encoding UTF8 | ConvertFrom-Json
-if ($package.name -ne "zura-premiere-mcp") { throw "Unexpected Zura MCP package '$($package.name)' in $repoRoot." }
+if ($package.name -ne "zura-premiere-mcp") { throw "Unexpected MCP package '$($package.name)' in $repoRoot." }
 
 $codexNeedsRestart = $false
 $node = Get-Command node.exe -ErrorAction SilentlyContinue
@@ -144,7 +138,7 @@ if (-not $codex) { throw "The Codex CLI was not found on PATH, so the local MCP 
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
 $configPath = Join-Path $codexHome "config.toml"
 $configText = if (Test-Path -LiteralPath $configPath) { Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 } else { "" }
-foreach ($name in @("zura-premiere-reels", "premiere-reels", "premiere-pro-leancoderkavy", "premiere-pro-mcp")) {
+foreach ($name in @("zura-premiere-reels", "premiere-reels", "premiere-pro-leancoderkavy", "premiere-pro-mcp", "zura-premiere-mcp")) {
   $tablePattern = "(?m)^\s*\[mcp_servers\.(?:`"|')?" + [regex]::Escape($name) + "(?:`"|')?(?:\.|\])"
   if ($configText -match $tablePattern) {
     & $codex.Source mcp remove $name
@@ -152,26 +146,13 @@ foreach ($name in @("zura-premiere-reels", "premiere-reels", "premiere-pro-leanc
   }
 }
 if (-not $PluginManaged) {
-  & $codex.Source mcp add zura-premiere-reels -- zura-premiere-mcp
-  Require-NativeSuccess "Registering Zura Premiere Reels with Codex"
-}
-
-if (-not $PluginManaged) {
-  $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
-  $skillSource = Join-Path $repoRoot "skills\zura-premiere-reels"
-  if (-not (Test-Path -LiteralPath (Join-Path $skillSource "SKILL.md"))) {
-    throw "The bundled Zura Premiere Reels skill was not found at $skillSource."
-  }
-  $skillDestination = Join-Path $codexHome "skills\zura-premiere-reels"
-  if ((Resolve-Path -LiteralPath $skillSource).Path -ne $skillDestination) {
-    New-Item -ItemType Directory -Force -Path $skillDestination | Out-Null
-    Copy-Item -Path (Join-Path $skillSource "*") -Destination $skillDestination -Recurse -Force
-  }
+  & $codex.Source mcp add zura-premiere-mcp -- zura-premiere-mcp
+  Require-NativeSuccess "Registering Zura Premiere MCP with Codex"
 }
 
 Set-Content -LiteralPath $sourceRecord -Value $repoRoot -Encoding UTF8
 if ($PluginManaged) {
-  Write-Host "Zura Premiere Reels MCP and Premiere panel are installed."
+  Write-Host "Zura Premiere MCP and Premiere panel are installed."
   Write-Host "Restart Premiere Pro if it was already open, so it loads the new panel. Do not close it automatically."
   if ($codexNeedsRestart) {
     Write-Host "Restart Codex once so its MCP process receives the new Node.js PATH, then open a new chat."
@@ -179,5 +160,5 @@ if ($PluginManaged) {
     Write-Host "Open a new Codex chat to load the plugin-managed MCP tools."
   }
 } else {
-  Write-Host "Zura Premiere Reels is installed. Restart Premiere Pro to load the CEP connector, then start a new Codex chat to load the MCP tools."
+  Write-Host "Zura Premiere MCP is installed. Restart Premiere Pro to load the CEP connector, then start a new Codex chat to load the MCP tools."
 }

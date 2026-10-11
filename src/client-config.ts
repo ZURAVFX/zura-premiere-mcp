@@ -35,10 +35,10 @@ export function renderClientConfig(
   }
   const entry = { command: nodeExecutable, args: [serverEntrypoint] };
   if (target === "codex") {
-    return `[mcp_servers.zura-premiere-reels]\ncommand = ${JSON.stringify(entry.command)}\nargs = ${JSON.stringify(entry.args)}\n`;
+    return `[mcp_servers.zura-premiere-mcp]\ncommand = ${JSON.stringify(entry.command)}\nargs = ${JSON.stringify(entry.args)}\n`;
   }
   const config = target === "vscode"
-    ? { servers: { "zura-premiere-reels": { type: "stdio", ...entry } } }
-    : { mcpServers: { "zura-premiere-reels": entry } };
+    ? { servers: { "zura-premiere-mcp": { type: "stdio", ...entry } } }
+    : { mcpServers: { "zura-premiere-mcp": entry } };
   return `${JSON.stringify(config, null, 2)}\n`;
 }

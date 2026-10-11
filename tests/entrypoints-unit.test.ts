@@ -226,12 +226,12 @@ describe("stdio CLI entry point", () => {
     expect(JSON.parse(String(log.mock.calls[0][0])).applied).toBe(false);
   });
 
-  it("directs updates through the Codex plugin without replacing the local package", async () => {
+  it("prints source update instructions without changing the local installation", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     const loaded = await importCli(["--check-update"]);
     await expect(loaded.promise).rejects.toThrow("EXIT:0");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("Update the zura-premiere-reels plugin in Codex"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("does not contact npm"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Zura Premiere MCP source and releases"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("does not contact GitHub"));
     expect(mocks.execFileSync).not.toHaveBeenCalled();
   });
 

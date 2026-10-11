@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const displayName = "Zura Premiere Reels";
+const displayName = "Zura Premiere MCP";
 const retiredDisplayNames = ["MCP for Adobe Premiere Pro", "Premiere Pro MCP", "Premiere Pro MCP Bridge", "MCP Bridge"];
 
 const surfaces = [
@@ -23,7 +23,7 @@ const surfaces = [
   {
     file: "uxp-plugin/manifest.json",
     required: [
-      `"name": "Zura Premiere Reels Advanced Bridge"`,
+      `"name": "Zura Premiere MCP Advanced Bridge"`,
       `"label": { "default": "Zura Advanced Bridge" }`,
     ],
   },

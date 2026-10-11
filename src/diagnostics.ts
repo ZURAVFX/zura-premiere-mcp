@@ -342,7 +342,7 @@ export function buildFirstRunReport(
           boundary: "connected",
           state: "needs_attention",
           message: "Premiere Pro did not answer the safe connection check.",
-          repair: "In Premiere Pro, open Window > Extensions > Zura Premiere Reels and make sure it says Running. Close any open Premiere dialog, then try again.",
+          repair: "In Premiere Pro, open Window > Extensions > Zura Premiere MCP and make sure it says Running. Close any open Premiere dialog, then try again.",
         },
         {
           id: "active_project",
@@ -445,7 +445,7 @@ export function renderDoctorHuman(report: LocalDoctorReport, identity?: { name: 
   
   // Identity header
   if (identity) {
-    lines.push("Zura Premiere Reels");
+    lines.push("Zura Premiere MCP");
     lines.push(`package: ${identity.name}@${identity.version}`);
     lines.push(`homepage: ${identity.homepage}`);
     lines.push("");

@@ -18,7 +18,7 @@ node scripts/build-uxp-ccx.mjs
 This writes:
 
 ```text
-artifacts/zura-premiere-reels-uxp-<version>-direct.ccx
+artifacts/zura-premiere-mcp-uxp-<version>-direct.ccx
 ```
 
 The builder uses a fixed ZIP timestamp, lexical file order, and stored entries
@@ -53,7 +53,7 @@ $env:UXP_MARKETPLACE_PLUGIN_ID = '<Adobe-issued ID>'
 node scripts/build-uxp-ccx.mjs
 ```
 
-That produces `artifacts/zura-premiere-reels-uxp-<version>-marketplace.ccx`. The
+That produces `artifacts/zura-premiere-mcp-uxp-<version>-marketplace.ccx`. The
 script refuses a Marketplace build without an Adobe-issued ID or if that ID is
 the direct-distribution ID. This preserves Adobe's required split between
 direct and Marketplace identities when both channels are used.

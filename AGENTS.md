@@ -3,19 +3,19 @@
 Canonical instructions for any IDE or coding agent working in this repository.
 Cursor, GitHub Copilot, Codex, Claude Code, Gemini CLI, Windsurf, and similar tools should start here.
 
-This repository is the Zura-maintained source for the Zura Premiere Reels local Codex plugin and its bundled Premiere MCP. It is derived from the MIT-licensed upstream project; see UPSTREAM.md for provenance.
+This repository contains Zura's local MCP server and Adobe Premiere Pro connector. It is derived from the MIT-licensed upstream project; see UPSTREAM.md for provenance.
 
 Adapter stubs (`CLAUDE.md`, `GEMINI.md`, `CONVENTIONS.md`, `.github/copilot-instructions.md`, `.cursor/rules/`, `.windsurf/rules/`, `.clinerules`, `.continue/rules/`, `.junie/guidelines.md`) point here. Keep those stubs thin; put durable guidance in this file or in a focused Cursor/Copilot path rule. Optional Cursor rule `.cursor/rules/jev-surfaces.mdc` scores CEP / UXP / claims file candidates. It is not a TypeSafe Jev sidecar protocol; do not add one here.
 
 ## What this repository is
 
-Local-first TypeScript [MCP](https://modelcontextprotocol.io) server and Codex plugin for editing in Adobe Premiere Pro. Product name: Zura Premiere Reels. Local package name: zura-premiere-mcp (private, installed from the plugin bundle). MCP server name: io.github.zuravfx/zura-premiere.
+Local-first TypeScript [MCP](https://modelcontextprotocol.io) server for Adobe Premiere Pro. Product name: Zura Premiere MCP. Local package name: zura-premiere-mcp. MCP server name: io.github.zuravfx/zura-premiere.
 
-It is not affiliated with Adobe. The package is not published to npm. Codex Marketplace updates deliver the MCP and Premiere panel together.
+It is not affiliated with Adobe. The package is built and installed locally from this source repository.
 
-## Install Premiere Reels from this checkout
+## Install from this checkout
 
-When the user asks to install Zura Premiere Reels from this folder, follow INSTALL.md. On Windows, INSTALL-ZURA-PREMIERE-REELS.ps1 adds this local Codex marketplace and plugin, then installs the bundled local MCP and CEP panel. Never substitute the upstream npm package.
+When the user asks to install from this folder, follow INSTALL.md. On Windows, run `INSTALL-ZURA-PREMIERE-MCP.ps1` to build and install the local server and CEP panel, then register the MCP with Codex. Do not substitute the upstream npm package.
 
 Production path: local Node.js MCP server (stdio) talking to a **CEP** panel inside Premiere through private file-based IPC (`.jsx` command files and `.json` responses). **UXP** is a capability-aware preview backend for Premiere 25.6+ documented APIs. A failed UXP mutation must never be silently retried through CEP or the undocumented QE DOM.
 
@@ -169,12 +169,12 @@ Reuse existing helpers and module patterns. Do not rewrite unrelated files or bu
 
 ## Website
 
-The user-facing distribution path is the private OA Motion Codex marketplace. It bundles the MCP source and installs the Premiere CEP panel locally. Do not imply that this fork publishes an npm package or operates a hosted Premiere service. Historical upstream references and release notes remain attributed as such.
+The supported distribution path is this public source repository, with local build and installation. Do not imply that the package is published to npm or operates a hosted Premiere service. Keep integrations that bundle this source compatible with the package name, command, MCP server name, and `scripts/install-zura-premiere-mcp.ps1 -PluginManaged` setup contract. Historical upstream references and release notes remain attributed as such.
 
 ## What not to touch casually
 
 - Generated inventories under `src/resources/*.json` and matching `docs/*-inventory.md` / drift docs — use the `npm run …:check` / generate scripts.
-- Version strings: search package, lockfile, CEP/UXP manifests, marketplace, MCP config, README and installer files together. Updates ship through the Codex plugin; do not add an npm or upstream auto-update route.
+- Version strings: search package, lockfile, CEP/UXP manifests, MCP config, README and installer files together. Do not add an upstream auto-update route.
 - `.worktrees/` — local checkouts; do not commit.
 
 ## Release naming

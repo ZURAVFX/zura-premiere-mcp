@@ -50,8 +50,9 @@ function isLoopbackPortInUse(error: unknown): boolean {
 }
 
 function printUpdateInstructions(): void {
-  console.log("Zura Premiere Reels updates are distributed through the Codex plugin. Update the zura-premiere-reels plugin in Codex, then run its setup skill if the local MCP or Premiere panel needs repair.");
-  console.log("This command does not contact npm or replace the local MCP package.");
+  console.log("Zura Premiere MCP source and releases are maintained at https://github.com/ZURAVFX/zura-premiere-mcp.");
+  console.log("Pull the latest source and rerun INSTALL-ZURA-PREMIERE-MCP.ps1 to update the local MCP and Premiere panel.");
+  console.log("This command does not contact npm or update files automatically.");
 }
 
 // Handle CLI flags
@@ -87,8 +88,8 @@ Usage:
   zura-premiere-mcp --doctor --apply-fixes --confirm-premiere-closed Confirm Premiere is fully closed before a connector repair
   zura-premiere-mcp --support-bundle  Print a privacy-safe, machine-readable support bundle
   zura-premiere-mcp --print-client-config <claude|cursor|vscode|codex> Print configuration for this installed copy; writes no files
-  zura-premiere-mcp --check-update    Show the Codex plugin update path (no npm access)
-  zura-premiere-mcp --update          Show the Codex plugin update path (no package replacement)
+  zura-premiere-mcp --check-update    Show the source update path (no npm access)
+  zura-premiere-mcp --update          Show the source update path (no automatic changes)
   zura-premiere-mcp --help          Show this help message
   zura-premiere-mcp --version       Show version
 
@@ -103,7 +104,7 @@ Environment variables:
   PREMIERE_UXP_PORT     UXP loopback WebSocket port (default: 7777)
   AFTER_EFFECTS_MCP_TEMP_DIR  Shared AE bridge directory (default: OS temp + /after-effects-mcp-bridge)
 
-More info: https://github.com/ZURAVFX/zura-premiere-reels
+More info: https://github.com/ZURAVFX/zura-premiere-mcp
 `);
   process.exit(0);
 }
@@ -148,7 +149,7 @@ if (args.includes("--doctor") || args.includes("--support-bundle")) {
     process.exit(1);
   }
   const pkg = await import("../package.json", { with: { type: "json" } }).catch(
-    () => ({ default: { name: "zura-premiere-mcp", version: "unknown", homepage: "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels" } }),
+    () => ({ default: { name: "zura-premiere-mcp", version: "unknown", homepage: "https://github.com/ZURAVFX/zura-premiere-mcp" } }),
   );
   if (args.includes("--support-bundle")) {
     // A support bundle is JSON by default so it can be attached to an issue or

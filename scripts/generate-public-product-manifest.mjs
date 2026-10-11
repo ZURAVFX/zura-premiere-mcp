@@ -16,7 +16,7 @@ export async function buildPublicProductManifest() {
   ]);
 
   return {
-    schemaVersion: "zura-premiere-reels.public-product.v1",
+    schemaVersion: "zura-premiere-mcp.public-product.v1",
     generatedFrom: {
       evidenceScope: "source_checkout_not_published_package",
       releaseMetadata: "release-metadata.json",
@@ -24,12 +24,12 @@ export async function buildPublicProductManifest() {
       registryMetadata: "registry/server.json",
     },
     product: {
-      name: "Zura Premiere Reels",
+      name: "Zura Premiere MCP",
       mcpName: packageJson.mcpName,
       localPackage: packageJson.name,
-      distribution: "private_codex_marketplace",
+      distribution: "public_source_repository",
       version: release.version,
-      repository: "https://github.com/ZURAVFX/zura-premiere-reels",
+      repository: "https://github.com/ZURAVFX/zura-premiere-mcp",
       homepage: packageJson.homepage,
       license: packageJson.license,
       localFirst: true,

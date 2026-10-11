@@ -116,7 +116,7 @@ let installDir;
 let packDir;
 
 try {
-  packDir = mkdtempSync(join(tmpdir(), "zura-premiere-reels-pack-output-"));
+  packDir = mkdtempSync(join(tmpdir(), "zura-premiere-mcp-pack-output-"));
   const packed = JSON.parse(
     runNpm(["pack", "--json", "--ignore-scripts", "--pack-destination", packDir]),
   );
@@ -143,7 +143,7 @@ try {
     throw new Error(`npm package is missing required files: ${missing.join(", ")}`);
   }
 
-  installDir = mkdtempSync(join(tmpdir(), "zura-premiere-reels-pack-"));
+  installDir = mkdtempSync(join(tmpdir(), "zura-premiere-mcp-pack-"));
   runNpm(["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball], {
     cwd: installDir,
   });

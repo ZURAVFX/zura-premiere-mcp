@@ -163,9 +163,9 @@ button { -webkit-appearance: none; }
   background: var(--surface-raised);
 }
 .codex-guide h2 { margin: 0 0 6px; color: var(--text); font-size: 14px; font-weight: 650; }
-.codex-guide p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.codex-guide p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
 .codex-guide strong { color: var(--text); font-weight: 650; }
-.codex-guide .guide-detail { margin-top: 7px; color: var(--text-muted); font-size: 12px; }
+.codex-guide .guide-detail { margin-top: 7px; color: var(--text-muted); font-size: 14px; }
 
 .advanced { margin-top: auto; border-top: 1px solid var(--border); }
 .advanced summary {

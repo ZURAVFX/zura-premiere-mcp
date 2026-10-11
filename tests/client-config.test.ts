@@ -8,12 +8,12 @@ describe("configuration for an exact local installation", () => {
     const node = 'C:\\Program Files\\nodejs\\node.exe';
     const server = 'C:\\Users\\An Editor\\MCP \\"test"\\dist\\index.js';
     const config = JSON.parse(renderClientConfig(client, node, server, "win32"));
-    expect(config).toEqual({ mcpServers: { "zura-premiere-reels": { command: node, args: [server] } } });
+    expect(config).toEqual({ mcpServers: { "zura-premiere-mcp": { command: node, args: [server] } } });
   });
 
   it("uses VS Code's servers container and serializes macOS paths as arguments", () => {
     const config = JSON.parse(renderClientConfig("vscode", "/opt/node/bin/node", "/Users/Editor/MCP & tools/dist/index.js", "darwin"));
-    expect(config).toEqual({ servers: { "zura-premiere-reels": {
+    expect(config).toEqual({ servers: { "zura-premiere-mcp": {
       type: "stdio", command: "/opt/node/bin/node", args: ["/Users/Editor/MCP & tools/dist/index.js"],
     } } });
   });
@@ -21,7 +21,7 @@ describe("configuration for an exact local installation", () => {
   it("escapes Codex TOML paths, including Windows backslashes and quotes", () => {
     const config = renderClientConfig("codex", "C:\\Program Files\\node.exe", 'C:\\MCP "copy"\\dist\\index.js', "win32");
     const lines = config.trim().split("\n");
-    expect(lines[0]).toBe("[mcp_servers.zura-premiere-reels]");
+    expect(lines[0]).toBe("[mcp_servers.zura-premiere-mcp]");
     expect(JSON.parse(lines[1].slice("command = ".length))).toBe("C:\\Program Files\\node.exe");
     expect(JSON.parse(lines[2].slice("args = ".length))).toEqual(['C:\\MCP "copy"\\dist\\index.js']);
   });
@@ -48,7 +48,7 @@ describe("configuration for an exact local installation", () => {
     const result = spawnSync(process.execPath, [cli, "--print-client-config", "claude"], { encoding: "utf8", timeout: 10000, windowsHide: true });
     expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
-    const entry = JSON.parse(result.stdout).mcpServers["zura-premiere-reels"];
+    const entry = JSON.parse(result.stdout).mcpServers["zura-premiere-mcp"];
     expect(entry).toEqual({ command: process.execPath, args: [cli] });
     const version = execFileSync(entry.command, [...entry.args, "--version"], { encoding: "utf8", timeout: 10000, windowsHide: true });
     expect(version.trim()).toMatch(/^\d+\.\d+\.\d+$/);

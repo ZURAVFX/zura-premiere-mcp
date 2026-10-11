@@ -1,4 +1,4 @@
-/* Zura Premiere Reels - CEP Plugin Main Script
+/* Zura Premiere MCP - CEP Plugin Main Script
  * Polls a temp directory for command files (.jsx), executes them
  * in Premiere Pro's ExtendScript engine, and writes results back. */
 
@@ -32,7 +32,7 @@ function setStatus(state, text) {
   statusText.setAttribute("data-state", state || "stopped");
   var detail = document.getElementById("statusDetail");
   if (detail) {
-    if (state === "connected") detail.textContent = "The Codex plugin can connect to this local bridge";
+    if (state === "connected") detail.textContent = "An MCP client can connect to this local bridge";
     else if (state === "waiting") detail.textContent = "Starting the local Premiere bridge";
     else if (state === "error") detail.textContent = "Open Advanced connection settings for details";
     else detail.textContent = "The local bridge is stopped";
@@ -419,7 +419,7 @@ function stopBridge() {
     }
   } catch (e) {}
 
-  log("Zura Premiere Reels Premiere connector loaded");
+  log("Zura Premiere MCP Premiere connector loaded");
   setStatus("waiting", "Starting local bridge…");
 
   // Always auto-start. The headless instance (StartOn ApplicationActivate) has no

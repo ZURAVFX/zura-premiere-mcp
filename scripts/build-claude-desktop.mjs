@@ -113,7 +113,7 @@ await runMcpb(["validate", path.join(stage, "manifest.json")]);
 
 const mcpbPath = path.join(
   artifacts,
-  `zura-premiere-reels-${packageJson.version}.mcpb`,
+  `zura-premiere-mcp-${packageJson.version}.mcpb`,
 );
 await runMcpb(["pack", stage, mcpbPath]);
 await runMcpb(["info", mcpbPath]);
