@@ -928,7 +928,7 @@ describe("Tool Handler Behavior", () => {
   describe("project-manager tools", () => {
     it("consolidate_and_transfer configures projectManager.options (see project-manager.test.ts)", async () => {
       const tools = getProjectManagerTools(bridgeOptions);
-      await (tools.consolidate_and_transfer.handler as any)({ destination_path: "/tmp/transfer" });
+      await (tools.consolidate_and_transfer.handler as any)({ destination_path: "/tmp/transfer", confirm_media_copy: true });
       const script = mockedSendCommand.mock.calls[0][0];
       expect(script).toContain("var o = pm.options;");
       expect(script).toContain('"Copied_"');

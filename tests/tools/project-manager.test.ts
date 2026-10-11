@@ -23,10 +23,10 @@ beforeEach(() => vi.clearAllMocks());
  * Live 25.2: only projectManager.options is honored, the destination must
  * exist, process() returns 0, and the copy lands in <dest>/Copied_<project>/.
  */
-function host(options: { existing?: string[] } = {}) {
+function host(options: { existing?: string[]; processStatus?: number; mediaFileCount?: number; parentMismatch?: boolean } = {}) {
   const fs = new Map<string, { dir: boolean; size: number }>();
   for (const dir of options.existing ?? []) fs.set(dir, { dir: true, size: 0 });
-  class FsEntry { constructor(public path: string) {} get name() { return this.path.split("/").pop() as string; } get fsName() { return this.path; } get exists() { return fs.has(this.path); } get length() { return fs.get(this.path)?.size ?? 0; } }
+  class FsEntry { constructor(public path: string) {} get name() { return this.path.split("/").pop() as string; } get fsName() { return this.path; } get exists() { return fs.has(this.path); } get length() { return fs.get(this.path)?.size ?? 0; } get parent() { return new FolderEntry(options.parentMismatch && this.path.endsWith("Copied_MCP Test") ? "/unexpected" : this.path.slice(0, this.path.lastIndexOf("/")) || "/"); } }
   class FolderEntry extends FsEntry {
     create() { fs.set(this.path, { dir: true, size: 0 }); return true; }
     getFiles(mask?: string) {
@@ -57,8 +57,11 @@ function host(options: { existing?: string[] } = {}) {
       fs.set(out, { dir: true, size: 0 });
       fs.set(`${out}/MCP Test.prproj`, { dir: false, size: 1000 });
       const scoped = opts.includeAllSequences === false && Array.isArray(opts.affectedSequences);
-      for (const f of scoped ? ["clip-a.mp4"] : ["clip-a.mp4", "Interview A.mp4"]) fs.set(`${out}/${f}`, { dir: false, size: 500 });
-      return 0;
+      const mediaFiles = options.mediaFileCount === undefined
+        ? (scoped ? ["clip-a.mp4"] : ["clip-a.mp4", "Interview A.mp4"])
+        : Array.from({ length: options.mediaFileCount }, (_, i) => `clip-${i}.mp4`);
+      for (const f of mediaFiles) fs.set(`${out}/${f}`, { dir: false, size: 500 });
+      return options.processStatus ?? 0;
     },
   };
   mockedSendCommand.mockImplementation(async (script: string) =>
@@ -67,23 +70,74 @@ function host(options: { existing?: string[] } = {}) {
 }
 
 describe("consolidate_and_transfer", () => {
+  it("requires explicit confirmation before copying any source media", async () => {
+    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer" })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("explicitly requests a portable/self-contained project"),
+    });
+    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: false })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("confirms copying source footage"),
+    });
+    expect(mockedSendCommand).not.toHaveBeenCalled();
+    expect((tools.consolidate_and_transfer.parameters as { required: string[] }).required).toContain("confirm_media_copy");
+  });
+
   it("copies only the active sequence's media into Copied_<project> and lists the files", async () => {
     const { seen } = host();
-    const result = await tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", include_all_sequences: false }) as Result;
+    const result = await tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: true, include_all_sequences: false }) as Result;
     expect(result).toMatchObject({
       success: true,
-      data: { verified: true, copiedProject: "/out/transfer/Copied_MCP Test/MCP Test.prproj", scope: "active sequence: Product Spot", transferMode: "copy", fileCount: 2, files: ["MCP Test.prproj", "clip-a.mp4"] },
+      data: { verified: true, copiedProject: "/out/transfer/Copied_MCP Test/MCP Test.prproj", scope: "active sequence: Product Spot", transferMode: "copy", fileCount: 2, totalBytes: 1500, files: ["MCP Test.prproj", "clip-a.mp4"], filesTruncated: false },
     });
     expect(seen[0]).toMatchObject({ clipTransferOption: 0, includeAllSequences: false, destinationPath: "/out/transfer/" });
   });
 
   it("refuses to reuse a destination that already has this project's copy", async () => {
     host({ existing: ["/out/transfer", "/out/transfer/Copied_MCP Test"] });
-    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer" })).resolves.toMatchObject({ success: false, error: expect.stringContaining("already exists") });
+    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: true })).resolves.toMatchObject({ success: false, error: expect.stringContaining("already exists") });
   });
 
   it("rejects copy_to_new_location false instead of ignoring it", async () => {
-    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/x", copy_to_new_location: false })).resolves.toMatchObject({ success: false });
+    await expect(tools.consolidate_and_transfer.handler({ destination_path: "/out/x", confirm_media_copy: true, copy_to_new_location: false })).resolves.toMatchObject({ success: false });
     expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+
+  it("rejects a relative destination before contacting Premiere", async () => {
+    await expect(tools.consolidate_and_transfer.handler({ destination_path: "work/output", confirm_media_copy: true })).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("absolute path explicitly requested"),
+    });
+    expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+
+  it("counts every output file and byte while truncating only the file-name list", async () => {
+    host({ mediaFileCount: 505 });
+    const result = await tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: true }) as Result;
+    expect(result).toMatchObject({
+      success: true,
+      data: { fileCount: 506, totalBytes: 253500, filesTruncated: true, files: expect.arrayContaining(["MCP Test.prproj"]) },
+    });
+    expect((result.data?.files as string[]).length).toBe(500);
+  });
+
+  it("reports the exact output folder and full size when Premiere returns a failure status", async () => {
+    host({ processStatus: 1 });
+    const result = await tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: true }) as Result;
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining("do not report packaging complete"),
+      data: { outputFolder: "/out/transfer/Copied_MCP Test", fileCount: 3, totalBytes: 2000, scanComplete: true },
+    });
+  });
+
+  it("fails when the output parent differs from the requested destination", async () => {
+    host({ parentMismatch: true });
+    const result = await tools.consolidate_and_transfer.handler({ destination_path: "/out/transfer", confirm_media_copy: true }) as Result;
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining("output parent did not match"),
+      data: { destination: "/out/transfer", actualDestination: "/unexpected", outputFolder: "/out/transfer/Copied_MCP Test" },
+    });
   });
 });

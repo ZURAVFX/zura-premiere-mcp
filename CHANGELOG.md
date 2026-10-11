@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `consolidate_and_transfer` now requires `confirm_media_copy: true` and an absolute destination, verifies Premiere's process status and output parent, and reports complete file/byte totals even when the returned file-name list is truncated.
+
 - Windows uses a private per-user Adobe application-data folder for the default Premiere bridge instead of the shared Temp tree. The CEP panel migrates its previously saved legacy default while preserving explicit custom paths.
 
 - Registered tools accept optional request-scoped `expected_project_path`; generated CEP commands refuse a different, missing or unsaved active project before the tool body. UXP and After Effects refuse this CEP-only guard. Omitting the guard preserves existing behavior.
