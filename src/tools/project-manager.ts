@@ -1,3 +1,4 @@
+import path from "node:path";
 import { buildToolScript, escapeForExtendScript } from "../bridge/script-builder.js";
 import { sendCommand, BridgeOptions } from "../bridge/file-bridge.js";
 
@@ -5,21 +6,26 @@ export function getProjectManagerTools(bridgeOptions: BridgeOptions) {
   return {
     consolidate_and_transfer: {
       description:
-        "Collect (copy) or transcode project media into a new project with Premiere's Project Manager. Premiere writes a Copied_<project> folder inside destination_path (created if missing); success is reported only after that folder holds the copied .prproj, with the copied files listed.",
+        "PORTABLE-PACKAGE ONLY. Copies or transcodes source media into a new Premiere project and may copy full-length source footage, using substantial disk space. For ordinary reel exports plus an editable project, save the project with its source media linked instead. Call this only when the user explicitly requests a self-contained/portable package and confirms copying source media. Pass the user's exact absolute destination; Premiere creates a Copied_<project> folder inside it.",
       parameters: {
         type: "object" as const,
         properties: {
           destination_path: {
             type: "string",
-            description: "Destination folder path for the consolidated project",
+            description: "Absolute destination directory explicitly requested by the user for the portable package",
+          },
+          confirm_media_copy: {
+            type: "boolean",
+            description:
+              "Required true only after the user explicitly requests a portable/self-contained project with source footage copied and confirms that copy. A request for reel exports, an editable project, or a delivery folder is not consent. Missing or false is rejected.",
           },
           include_all_sequences: {
             type: "boolean",
-            description: "Include all sequences (default: true). If false, only active sequence is used.",
+            description: "Include all sequences (default: true). If false, only the active sequence is used.",
           },
           copy_to_new_location: {
             type: "boolean",
-            description: "Must be true (the default): Premiere's scripted Project Manager always collects media into the destination.",
+            description: "Legacy compatibility option. Must be true because Premiere's scripted Project Manager always copies media into destination_path.",
           },
           exclude_unused: {
             type: "boolean",
@@ -50,10 +56,11 @@ export function getProjectManagerTools(bridgeOptions: BridgeOptions) {
             description: "Convert synthetic importer items (default: false)",
           },
         },
-        required: ["destination_path"],
+        required: ["destination_path", "confirm_media_copy"],
       },
       handler: async (args: {
         destination_path: string;
+        confirm_media_copy?: boolean;
         include_all_sequences?: boolean;
         copy_to_new_location?: boolean;
         exclude_unused?: boolean;
@@ -64,17 +71,29 @@ export function getProjectManagerTools(bridgeOptions: BridgeOptions) {
         convert_ae_comps?: boolean;
         convert_synthetic?: boolean;
       }) => {
+        if (args.confirm_media_copy !== true) {
+          return {
+            success: false,
+            error:
+              "Media transfer is blocked unless the user explicitly requests a portable/self-contained project and confirms copying source footage. For reel exports plus an editable project, save the project with linked source media instead.",
+          };
+        }
         const destinationPath = args.destination_path.trim();
         if (!destinationPath) {
           return { success: false, error: "destination_path must not be empty" };
         }
+        if (!path.isAbsolute(destinationPath)) {
+          return { success: false, error: "destination_path must be an absolute path explicitly requested by the user" };
+        }
         if (args.copy_to_new_location === false) {
           return { success: false, error: "copy_to_new_location false is not supported: Premiere's scripted Project Manager always collects media into destination_path." };
         }
-        const destination = escapeForExtendScript(destinationPath.replace(/\/+$/, ""));
-        // Live 25.2: the settings live on projectManager.options (setting them on
-        // projectManager itself is ignored), the destination must already exist,
-        // process() returns 0 on success, and the copy lands in Copied_<project>.
+        const destinationInput = destinationPath.replace(/[\\/]+$/, "") || path.parse(destinationPath).root;
+        const destination = escapeForExtendScript(destinationInput);
+        const requestedDestination = escapeForExtendScript(destinationPath);
+        // Project Manager always copies or transcodes source footage. Require a
+        // separate explicit opt-in so ordinary reel delivery cannot trigger a
+        // full-media package by mistake.
         const script = buildToolScript(`
           var pm = app.projectManager;
           if (!pm || !pm.options) return __error("Project Manager not available");
@@ -82,13 +101,14 @@ export function getProjectManagerTools(bridgeOptions: BridgeOptions) {
           if (!project) return __error("No project is open");
           ${args.include_all_sequences === false ? `if (!project.activeSequence) return __error("include_all_sequences is false but there is no active sequence");` : ""}
 
-          var destination = new Folder("${destination}");
-          if (destination.exists && !__isDirectory("${destination}")) return __error("destination_path ${destination} is a file, not a folder");
-          if (!destination.exists && !destination.create()) return __error("Could not create destination_path ${destination}");
+          var destinationFolder = new Folder("${destination}");
+          if (destinationFolder.exists && !__isDirectory(destinationFolder.fsName)) return __error("destination_path " + destinationFolder.fsName + " is a file, not a folder");
+          if (!destinationFolder.exists && !destinationFolder.create()) return __error("Could not create destination_path " + destinationFolder.fsName);
+          var destinationFsName = destinationFolder.fsName;
           var outputName = "Copied_" + String(project.name).replace(/\\.prproj$/i, "");
-          var output = new Folder("${destination}/" + outputName);
+          var output = new Folder(destinationFsName + "/" + outputName);
           if (output.exists) {
-            return __error("${destination}/" + outputName + " already exists; choose another destination_path so the new copy can be verified.");
+            return __error(output.fsName + " already exists; choose another absolute destination_path so the new copy can be verified.");
           }
 
           var o = pm.options;
@@ -102,39 +122,89 @@ export function getProjectManagerTools(bridgeOptions: BridgeOptions) {
           o.convertImageSequencesToClips = ${args.convert_image_sequences === true};
           o.convertAECompsToClips = ${args.convert_ae_comps === true};
           o.convertSyntheticsToClips = ${args.convert_synthetic === true};
-          o.destinationPath = "${destination}/";
+          o.destinationPath = destinationFsName + "/";
 
           var status = pm.process(project);
           var errors = [];
           try { for (var e = 0; e < pm.errors.length; e++) errors.push(String(pm.errors[e])); } catch (eErrors) {}
           if (!output.exists) {
-            return __jsonStringify({ success: false, error: "Project Manager did not create " + outputName + " in the destination (process returned " + status + ").", data: { errors: errors } });
+            return __jsonStringify({ success: false, error: "Project Manager did not create the expected output at " + output.fsName + " (process returned " + status + ").", data: { requestedDestination: "${requestedDestination}", destination: destinationFsName, expectedOutputFolder: output.fsName, status: status, errors: errors } });
           }
+
           var projects = output.getFiles("*.prproj");
-          if (!projects || projects.length < 1) {
-            return __jsonStringify({ success: false, error: outputName + " was created but holds no copied .prproj (process returned " + status + ").", data: { errors: errors } });
-          }
           var files = [];
+          var fileCount = 0;
           var totalBytes = 0;
+          var scanComplete = true;
+          var scanErrors = [];
           var walk = function (folder, prefix) {
-            var entries = folder.getFiles();
-            for (var f = 0; f < entries.length && files.length < 500; f++) {
-              if (entries[f] instanceof Folder) walk(entries[f], prefix + entries[f].name + "/");
-              else { files.push(prefix + decodeURI(entries[f].name)); totalBytes += entries[f].length; }
+            var entries = [];
+            try { entries = folder.getFiles(); }
+            catch (eList) { scanComplete = false; scanErrors.push(folder.fsName + ": " + String(eList)); return; }
+            for (var f = 0; f < entries.length; f++) {
+              if (entries[f] instanceof Folder) {
+                walk(entries[f], prefix + entries[f].name + "/");
+              } else {
+                fileCount++;
+                var length = Number(entries[f].length);
+                if (isFinite(length) && length >= 0) totalBytes += length;
+                else { scanComplete = false; scanErrors.push("Could not read file size: " + entries[f].fsName); }
+                if (files.length < 500) {
+                  var fileName = String(entries[f].name);
+                  try { fileName = decodeURI(fileName); } catch (eDecode) {}
+                  files.push(prefix + fileName);
+                }
+              }
             }
           };
           walk(output, "");
+
+          var actualDestination = "";
+          try { actualDestination = output.parent.fsName; } catch (eParent) {}
+          var normalizePath = function (value) { return String(value).replace(/\\\\/g, "/").replace(/\\/+$/, "").toLowerCase(); };
+          var destinationMatches = actualDestination && normalizePath(actualDestination) === normalizePath(destinationFsName);
+          var copiedProject = projects && projects.length > 0 ? projects[0].fsName : null;
+          var resultData = {
+            requestedDestination: "${requestedDestination}",
+            destination: destinationFsName,
+            actualDestination: actualDestination,
+            outputFolder: output.fsName,
+            copiedProject: copiedProject,
+            processStatus: status,
+            fileCount: fileCount,
+            totalBytes: totalBytes,
+            files: files,
+            filesTruncated: fileCount > files.length,
+            scanComplete: scanComplete,
+            scanErrors: scanErrors,
+            errors: errors
+          };
+          if (status !== 0) {
+            return __jsonStringify({ success: false, error: "Project Manager returned nonzero status " + status + "; do not report packaging complete. Inspect the exact leftover output folder.", data: resultData });
+          }
+          if (!destinationMatches) {
+            return __jsonStringify({ success: false, error: "Project Manager output parent did not match the requested destination; do not report packaging complete.", data: resultData });
+          }
+          if (!projects || projects.length < 1) {
+            return __jsonStringify({ success: false, error: output.fsName + " was created but holds no copied .prproj (process returned " + status + ").", data: resultData });
+          }
+          if (!scanComplete) {
+            return __jsonStringify({ success: false, error: "Could not fully inspect the Project Manager output; do not report packaging complete.", data: resultData });
+          }
           return __result({
             completed: true,
             verified: true,
-            destination: "${destination}",
+            requestedDestination: "${requestedDestination}",
+            destination: destinationFsName,
+            actualDestination: actualDestination,
             outputFolder: output.fsName,
-            copiedProject: projects[0].fsName,
+            copiedProject: copiedProject,
             scope: ${args.include_all_sequences === false ? "\"active sequence: \" + project.activeSequence.name" : "\"all sequences\""},
             transferMode: "${args.transcode ? "transcode (match sequence)" : "copy"}",
-            fileCount: files.length,
+            fileCount: fileCount,
             totalBytes: totalBytes,
             files: files,
+            filesTruncated: fileCount > files.length,
             errors: errors
           });
         `);
