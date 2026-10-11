@@ -255,7 +255,7 @@ export function createDoctorRepairPlan(report: LocalDoctorReport): DoctorRepairP
       canApplyLocally: false,
       requiresPremiereClosed: false,
       createsBackup: false,
-      instruction: "Install Node.js 20.19 or later using your approved system package process, then rerun premiere-pro-mcp --doctor.",
+      instruction: "Install Node.js 20.19 or later using your approved system package process, then rerun zura-premiere-mcp --doctor.",
       verification: "A new local doctor report must show NODE_RUNTIME_SUPPORTED. This does not verify Premiere.",
     });
   }
@@ -342,7 +342,7 @@ export function buildFirstRunReport(
           boundary: "connected",
           state: "needs_attention",
           message: "Premiere Pro did not answer the safe connection check.",
-          repair: "In Premiere Pro, open Window > Extensions > MCP Bridge and make sure it says Running. Close any open Premiere dialog, then try again.",
+          repair: "In Premiere Pro, open Window > Extensions > Zura Premiere Reels and make sure it says Running. Close any open Premiere dialog, then try again.",
         },
         {
           id: "active_project",
@@ -362,7 +362,7 @@ export function buildFirstRunReport(
         },
       ],
       nextStep: "Reconnect the Premiere Connector, then run this safe check again.",
-      repair: "If the Connector still does not respond, run get_capabilities to compare the selected bridge directory with the CEP panel, then run premiere-pro-mcp --diagnose-cep and follow its repair guidance.",
+      repair: "If the Zura panel still does not respond, run get_capabilities to compare the selected bridge directory with the panel, then run zura-premiere-mcp --diagnose-cep and follow its repair guidance.",
     };
   }
 
@@ -445,13 +445,13 @@ export function renderDoctorHuman(report: LocalDoctorReport, identity?: { name: 
   
   // Identity header
   if (identity) {
-    lines.push("MCP for Adobe Premiere Pro");
+    lines.push("Zura Premiere Reels");
     lines.push(`package: ${identity.name}@${identity.version}`);
     lines.push(`homepage: ${identity.homepage}`);
     lines.push("");
   }
   
-  lines.push(report.overall === "ready" ? "Premiere MCP local check: ready" : "Premiere MCP local check: needs attention");
+  lines.push(report.overall === "ready" ? "Zura local check: ready" : "Zura local check: needs attention");
   lines.push("");
   
   for (const component of report.components) {

@@ -16,12 +16,12 @@ function expect(condition, message) {
 const mcpName = packageJson.mcpName;
 const npmPackage = manifest.packages?.[0];
 
-expect(typeof mcpName === "string" && /^io\.github\.leancoderkavy\/[a-z0-9-]+$/.test(mcpName), "package.json mcpName must use the leancoderkavy GitHub namespace");
+expect(mcpName === "io.github.zuravfx/zura-premiere", "package.json mcpName must use the Zura GitHub namespace");
 expect(manifest.$schema === "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json", "registry/server.json must use the current official registry schema");
 expect(manifest.name === mcpName, "registry/server.json name must match package.json mcpName");
 expect(manifest.version === packageJson.version, "registry/server.json version must match package.json version");
 expect(typeof manifest.description === "string" && manifest.description.length <= 100, "registry/server.json description must stay within the official registry's 100-character limit");
-expect(manifest.repository?.url === "https://github.com/leancoderkavy/premiere-pro-mcp", "registry/server.json must reference the canonical GitHub repository");
+expect(manifest.repository?.url === "https://github.com/ZURAVFX/zura-premiere-reels", "registry/server.json must reference the Zura source repository");
 expect(npmPackage?.registryType === "npm", "registry/server.json must describe an npm package");
 expect(npmPackage?.identifier === packageJson.name, "registry npm identifier must match package.json name");
 expect(npmPackage?.version === packageJson.version, "registry npm package version must match package.json version");

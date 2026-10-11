@@ -122,7 +122,25 @@ describe("getTempDir", () => {
   it("returns default when no options or env", () => {
     delete process.env.PREMIERE_TEMP_DIR;
     const result = getTempDir();
-    expect(result).toBe(join(tmpdir(), "premiere-mcp-bridge"));
+    expect(result).toBe(getDefaultBridgeTempDir());
+  });
+
+  it("uses a per-user Adobe directory by default on Windows", () => {
+    expect(getDefaultBridgeTempDir(
+      "win32",
+      "C:\\Users\\editor\\AppData\\Local\\Temp",
+      () => null,
+      { LOCALAPPDATA: "C:\\Users\\editor\\AppData\\Local" },
+    )).toBe("C:\\Users\\editor\\AppData\\Local\\Adobe\\ZuraPremiereReelsMCP\\bridge");
+  });
+
+  it("derives the Windows per-user Adobe directory from USERPROFILE if needed", () => {
+    expect(getDefaultBridgeTempDir(
+      "win32",
+      "C:\\Temp",
+      () => null,
+      { USERPROFILE: "C:\\Users\\editor" },
+    )).toBe("C:\\Users\\editor\\AppData\\Local\\Adobe\\ZuraPremiereReelsMCP\\bridge");
   });
 
   it("uses the Darwin per-user temporary root when a GUI client omits TMPDIR", () => {

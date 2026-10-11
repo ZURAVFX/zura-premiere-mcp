@@ -140,7 +140,7 @@ export function validateUxpManifest(manifest, packageJson, { expectedId } = {}) 
       manifest.entrypoints.some(
         (entrypoint) => entrypoint.type === "panel" && entrypoint.id === "mcpBridgePanel",
       ),
-    "UXP package must include the MCP for Adobe Premiere Pro panel entry point",
+    "UXP package must include the Zura Advanced Bridge panel entry point",
   );
   assert(
     manifest.requiredPermissions?.localFileSystem === "request",

@@ -430,6 +430,14 @@ function panelHarness(
   pluginDirectory: typeof pluginDirectories[number],
   symbolicLink: boolean,
   mode = 0o700,
+  options: {
+    platform?: string;
+    tempDirectory?: string;
+    homeDirectory?: string;
+    failHomeDirectory?: boolean;
+    env?: Record<string, string>;
+    savedBridgeDirectory?: string;
+  } = {},
 ) {
   const elements = new Map<string, any>();
   const element = (id: string) => {
@@ -467,9 +475,16 @@ function panelHarness(
   };
   const modules: Record<string, unknown> = {
     fs,
-    path: require("node:path"),
-    os: { platform: () => "linux", tmpdir: () => "/tmp" },
-    process: { env: {}, getuid: () => 1000 },
+    path: options.platform === "win32" ? require("node:path").win32 : require("node:path"),
+    os: {
+      platform: () => options.platform || "linux",
+      tmpdir: () => options.tempDirectory || "/tmp",
+      homedir: () => {
+        if (options.failHomeDirectory) throw new Error("home directory unavailable");
+        return options.homeDirectory || "/home/editor";
+      },
+    },
+    process: { env: options.env || {}, getuid: () => 1000 },
     https: {},
     child_process: {},
     crypto: {},
@@ -482,14 +497,17 @@ function panelHarness(
       getElementById: element,
       createElement: () => element(`created-${elements.size}`),
     },
-    localStorage: { getItem: vi.fn(() => null), setItem: vi.fn() },
+    localStorage: {
+      getItem: vi.fn(() => options.savedBridgeDirectory || null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    },
     window: { confirm: vi.fn(() => false) },
     require: (name: string) => modules[name],
     setInterval,
     clearInterval: vi.fn(),
     setTimeout: (callback: () => void) => { timers.push(callback); return timers.length; },
     clearTimeout: vi.fn(),
-    MCPBridgeUpdater: { CURRENT_VERSION: "test", normalizeVersion: vi.fn() },
   };
   context.window.cep_node = null;
   const securitySource = readFileSync(
@@ -499,10 +517,43 @@ function panelHarness(
   runInNewContext(securitySource, context, { filename: `${pluginDirectory}/bridge-directory-security.cjs` });
   const mainSource = readFileSync(join(root, pluginDirectory, "main.js"), "utf8");
   runInNewContext(mainSource, context, { filename: `${pluginDirectory}/main.js` });
-  return { context, elements, timers, writeFileSync, setInterval };
+  return { context, elements, timers, writeFileSync, setInterval, localStorage: context.localStorage };
 }
 
 describe("CEP panel startup validation", () => {
+  it("uses the per-user Adobe application-data path on Windows", () => {
+    const harness = panelHarness("cep-plugin", false, 0o700, {
+      platform: "win32",
+      tempDirectory: "C:\\Users\\editor\\AppData\\Local\\Temp",
+      env: { LOCALAPPDATA: "C:\\Users\\editor\\AppData\\Local" },
+    });
+
+    expect(harness.elements.get("tempDir").value)
+      .toBe("C:\\Users\\editor\\AppData\\Local\\Adobe\\ZuraPremiereReelsMCP\\bridge");
+  });
+
+  it("migrates a previously saved Windows Temp default", () => {
+    const oldDefault = "C:\\Users\\editor\\AppData\\Local\\Temp\\premiere-mcp-bridge";
+    const harness = panelHarness("cep-plugin", false, 0o700, {
+      platform: "win32",
+      tempDirectory: "C:\\Users\\editor\\AppData\\Local\\Temp",
+      env: { LOCALAPPDATA: "C:\\Users\\editor\\AppData\\Local" },
+      savedBridgeDirectory: oldDefault,
+    });
+
+    expect(harness.elements.get("tempDir").value)
+      .toBe("C:\\Users\\editor\\AppData\\Local\\Adobe\\ZuraPremiereReelsMCP\\bridge");
+    expect(harness.localStorage.removeItem).toHaveBeenCalledWith("mcp_bridge_temp_dir");
+  });
+
+  it("fails closed instead of falling back to shared Temp if Windows user paths are unavailable", () => {
+    expect(() => panelHarness("cep-plugin", false, 0o700, {
+      platform: "win32",
+      tempDirectory: "C:\\Temp",
+      failHomeDirectory: true,
+    })).toThrow(/private per-user Windows bridge directory/i);
+  });
+
   it("does not start Premiere polling or heartbeat for a symbolic-link directory", () => {
     const harness = panelHarness("cep-plugin", true);
 

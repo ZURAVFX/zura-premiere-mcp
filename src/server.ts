@@ -163,7 +163,7 @@ const debugEnabled = /^(1|true|yes|on|debug)$/i.test(
 
 function debugLog(message: string): void {
   if (debugEnabled) {
-    console.error(`[premiere-pro-mcp] ${message}`);
+    console.error(`[zura-premiere-mcp] ${message}`);
   }
 }
 
@@ -433,7 +433,7 @@ export function createServer(
   ));
   const server = new McpServer(
     {
-      name: "premiere-pro-mcp",
+      name: "zura-premiere-mcp",
       version: SERVER_VERSION,
     },
     {
@@ -446,7 +446,7 @@ export function createServer(
       },
       capabilities: {
         extensions: {
-          "io.github.leancoderkavy/premiere-pro": {
+          "io.github.zuravfx/zura-premiere": {
             protocolRevision: "2026-07-28",
             dualEra: true,
             transports: ["stdio", "streamable-http"],

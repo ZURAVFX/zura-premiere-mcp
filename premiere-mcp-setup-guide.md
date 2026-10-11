@@ -209,7 +209,9 @@ approval.
 
 - Fully quit Premiere before installing, removing, or refreshing the CEP
   connector; restart Premiere after the operation.
-- The default local bridge directory normally needs no configuration. If
+- On Windows, the default bridge is under `%LOCALAPPDATA%\Adobe\ZuraPremiereReelsMCP\bridge`,
+  outside the shared Temp tree. Other platforms use the per-user system temp folder.
+  The default local bridge directory normally needs no configuration. If
   `PREMIERE_TEMP_DIR` is overridden, set the same absolute path in both the MCP
   server and the Premiere connector. Do not reuse a Windows path on macOS or
   the reverse.

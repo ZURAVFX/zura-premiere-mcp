@@ -243,7 +243,7 @@ export function getCaptionAuthoringTools() {
                   ? ["   - Transform: uppercase recommended for this preset"]
                   : []),
               ],
-              mutation_refused: "This tool provides guidance only. MCP for Adobe Premiere Pro does not expose a CaptionTrack style mutation API because Premiere does not expose one through documented ExtendScript, QE DOM, or UXP surfaces. Apply caption styles manually in the Essential Graphics panel.",
+              mutation_refused: "This tool provides guidance only. Zura Premiere Reels does not expose a CaptionTrack style mutation API because Premiere does not expose one through documented ExtendScript, QE DOM, or UXP surfaces. Apply caption styles manually in the Essential Graphics panel.",
               safe_zones: style.safe_zone_recommendation,
               routes: [...CAPTION_AUTHORING_ROUTES, ...SAFE_ZONE_ROUTES],
             },

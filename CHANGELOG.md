@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added the `zura-premiere-reels` Codex plugin with a bundled local MCP source archive and a setup skill that installs Node.js LTS via WinGet when needed, builds and installs the MCP, and installs the Premiere CEP panel. GitHub CLI and Git are needed only to access the private OA Motion marketplace; the plugin setup does not clone a repository or install a global skill.
+- Shorts workflows now use a static native Motion crop per continuous camera shot, cut directly at real camera changes, and remove only clearly low-value pauses or dead space. They do not use Auto Reframe or Position keyframes.
+
 ### Fixed
+
+- Windows uses `%LOCALAPPDATA%\Adobe\ZuraPremiereReelsMCP\bridge` for the default Premiere bridge instead of the shared Temp tree. The CEP panel migrates its previously saved legacy default to the new location while preserving explicit custom paths.
 
 - Registered tools accept optional request-scoped `expected_project_path`; generated CEP commands refuse a different, missing or unsaved active project before the tool body. UXP and After Effects refuse this CEP-only guard. Omitting the guard preserves existing behavior.
 

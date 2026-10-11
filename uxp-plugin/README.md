@@ -1,6 +1,6 @@
-# MCP for Adobe Premiere Pro UXP bridge
+# Zura Advanced Premiere Bridge
 
-Production-oriented UXP transport for Premiere Pro 25.6+. Set `PREMIERE_UXP_TOKEN` to a secret of at least 16 characters before starting the MCP server. Side-load `manifest.json` with UXP Developer Tool during development, open **Window → UXP Plugins → MCP for Adobe Premiere Pro**, enter the same secret in **Bridge token**, then connect to the MCP-side WebSocket endpoint (default `ws://127.0.0.1:7777/uxp`). For end-user direct distribution, use the `.ccx` workflow in [DISTRIBUTION.md](./DISTRIBUTION.md) instead of asking users to load a development folder.
+Optional advanced transport for Premiere Pro 25.6+. Zura Premiere Reels uses the CEP connector by default. The UXP bridge is not needed for the reels workflow. If an advanced UXP workflow is specifically required, set `PREMIERE_UXP_TOKEN` to a secret of at least 16 characters, open **Window → UXP Plugins → Zura Advanced Bridge**, enter the same secret in **Bridge token**, and connect to the local endpoint (`ws://127.0.0.1:7777/uxp`).
 
 Before using a path-based command, choose one **Approved workspace** folder in the
 panel. The manifest uses requested filesystem access, and the panel restores only

@@ -5,8 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const displayName = "MCP for Adobe Premiere Pro";
-const retiredDisplayNames = ["Premiere Pro MCP", "Premiere Pro MCP Bridge", "MCP Bridge"];
+const displayName = "Zura Premiere Reels";
+const retiredDisplayNames = ["MCP for Adobe Premiere Pro", "Premiere Pro MCP", "Premiere Pro MCP Bridge", "MCP Bridge"];
 
 const surfaces = [
   {
@@ -23,13 +23,13 @@ const surfaces = [
   {
     file: "uxp-plugin/manifest.json",
     required: [
-      `\"name\": \"${displayName}\"`,
-      `\"label\": { \"default\": \"${displayName}\" }`,
+      `"name": "Zura Premiere Reels Advanced Bridge"`,
+      `"label": { "default": "Zura Advanced Bridge" }`,
     ],
   },
   {
     file: "uxp-plugin/index.html",
-    required: [`<h3>${displayName}</h3>`],
+    required: [`<h3>Zura Advanced Bridge</h3>`],
   },
   {
     file: "claude-desktop/manifest.json",
@@ -50,12 +50,9 @@ for (const surface of surfaces) {
       errors.push(`${surface.file} is missing required display name evidence: ${required}`);
     }
   }
-  // The README can use the full search phrase without treating its suffix as a display name.
-  const brandingText = surface.file === "README.md"
-    ? source.replaceAll("Adobe Premiere Pro MCP", "")
-    : source;
-  for (const retired of retiredDisplayNames) {
-    if (brandingText.includes(retired)) {
+  // Keep upstream product attribution in README while checking current product surfaces.
+  for (const retired of surface.file === "README.md" ? [] : retiredDisplayNames) {
+    if (source.includes(retired)) {
       errors.push(`${surface.file} still exposes retired display name: ${retired}`);
     }
   }
@@ -65,4 +62,4 @@ if (errors.length > 0) {
   throw new Error(`Adobe Marketplace branding validation failed:\n- ${errors.join("\n- ")}`);
 }
 
-console.log(`Validated Marketplace display-name consistency across ${surfaces.length} source surfaces.`);
+console.log(`Validated Zura display-name consistency across ${surfaces.length} source surfaces.`);

@@ -96,13 +96,13 @@ export function getTelemetry(): Telemetry {
   });
 
   telemetry = new PostHogTelemetry(client, distinctId, {
-    service: "premiere-pro-mcp",
+    service: "zura-premiere-mcp",
     service_version: process.env.npm_package_version ?? "unknown",
     environment: process.env.POSTHOG_ENVIRONMENT ?? process.env.NODE_ENV ?? "production",
     region: process.env.FLY_REGION,
     transport: process.env.PREMIERE_MCP_TRANSPORT ?? "unknown",
   });
 
-  console.error(`[premiere-pro-mcp] PostHog telemetry enabled (${host})`);
+  console.error(`[zura-premiere-mcp] PostHog telemetry enabled (${host})`);
   return telemetry;
 }

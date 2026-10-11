@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Remove only the MCP for Adobe Premiere Pro CEP connector. It deliberately
+# Remove only the Zura Premiere Reels CEP connector. It deliberately
 # leaves Adobe's shared PlayerDebugMode setting alone.
 
 set -euo pipefail

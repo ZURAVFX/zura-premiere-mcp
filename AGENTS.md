@@ -3,15 +3,19 @@
 Canonical instructions for any IDE or coding agent working in this repository.
 Cursor, GitHub Copilot, Codex, Claude Code, Gemini CLI, Windsurf, and similar tools should start here.
 
-This is **not** the product website LLM crawl file. That file is <https://premiere-pro-mcp.com/llms.txt>, generated in the separate website repository.
+This repository is the Zura-maintained source for the Zura Premiere Reels local Codex plugin and its bundled Premiere MCP. It is derived from the MIT-licensed upstream project; see UPSTREAM.md for provenance.
 
 Adapter stubs (`CLAUDE.md`, `GEMINI.md`, `CONVENTIONS.md`, `.github/copilot-instructions.md`, `.cursor/rules/`, `.windsurf/rules/`, `.clinerules`, `.continue/rules/`, `.junie/guidelines.md`) point here. Keep those stubs thin; put durable guidance in this file or in a focused Cursor/Copilot path rule. Optional Cursor rule `.cursor/rules/jev-surfaces.mdc` scores CEP / UXP / claims file candidates. It is not a TypeSafe Jev sidecar protocol; do not add one here.
 
 ## What this repository is
 
-Independent TypeScript [MCP](https://modelcontextprotocol.io) server that gives a compatible AI client structured control over supported **Adobe Premiere Pro** workflows. Display name: MCP for Adobe Premiere Pro. npm package: `premiere-pro-mcp`. MCP server name: `io.github.leancoderkavy/premiere-pro`.
+Local-first TypeScript [MCP](https://modelcontextprotocol.io) server and Codex plugin for editing in Adobe Premiere Pro. Product name: Zura Premiere Reels. Local package name: zura-premiere-mcp (private, installed from the plugin bundle). MCP server name: io.github.zuravfx/zura-premiere.
 
-It is not affiliated with Adobe. The only npm package published from this repo is `premiere-pro-mcp`.
+It is not affiliated with Adobe. The package is not published to npm. Codex Marketplace updates deliver the MCP and Premiere panel together.
+
+## Install Premiere Reels from this checkout
+
+When the user asks to install Zura Premiere Reels from this folder, follow INSTALL.md. On Windows, INSTALL-ZURA-PREMIERE-REELS.ps1 adds this local Codex marketplace and plugin, then installs the bundled local MCP and CEP panel. Never substitute the upstream npm package.
 
 Production path: local Node.js MCP server (stdio) talking to a **CEP** panel inside Premiere through private file-based IPC (`.jsx` command files and `.json` responses). **UXP** is a capability-aware preview backend for Premiere 25.6+ documented APIs. A failed UXP mutation must never be silently retried through CEP or the undocumented QE DOM.
 
@@ -30,7 +34,7 @@ Read only what the task needs. Current source and release metadata beat dated sn
 | API research (dated; not live counts) | `RESEARCH.md` |
 | Registered tool catalog | `docs/supported-actions.md` (generated) |
 | Product claims governance | `docs/claims-registry.md`, `docs/claims-registry.json` |
-| Published-package facts | npm tarball, synced by [`leancoderkavy/premiere-pro-mcp-site`](https://github.com/leancoderkavy/premiere-pro-mcp-site) to <https://premiere-pro-mcp.com/facts/> |
+| Source capability facts | release-metadata.json and generated public-product-manifest.json; neither is an npm publication claim |
 | Development source metadata | `release-metadata.json` |
 | Release titles, tags, and versions | `docs/release-conventions.md` |
 | MCP runtime instructions for clients | `src/workflows/agent-instructions.ts` |
@@ -165,12 +169,12 @@ Reuse existing helpers and module patterns. Do not rewrite unrelated files or bu
 
 ## Website
 
-The marketing site (`premiere-pro-mcp.com`) lives in [`leancoderkavy/premiere-pro-mcp-site`](https://github.com/leancoderkavy/premiere-pro-mcp-site). It syncs published npm facts automatically (every 6 hours, or sooner when `npm-publish.yml` sends a `package-published` dispatch), so a release here needs no website change. This repo only serves the operator-managed MCP endpoint on `premiere-pro-mcp.fly.dev`; non-MCP paths there redirect to the site. Qualify README and docs claims per `docs/claims-registry.md`.
+The user-facing distribution path is the private OA Motion Codex marketplace. It bundles the MCP source and installs the Premiere CEP panel locally. Do not imply that this fork publishes an npm package or operates a hosted Premiere service. Historical upstream references and release notes remain attributed as such.
 
 ## What not to touch casually
 
 - Generated inventories under `src/resources/*.json` and matching `docs/*-inventory.md` / drift docs — use the `npm run …:check` / generate scripts.
-- Version strings: search package, lockfile, CEP/UXP manifests, marketplace, MCP config, updater, README and plugin pins, and installer files together.
+- Version strings: search package, lockfile, CEP/UXP manifests, marketplace, MCP config, README and installer files together. Updates ship through the Codex plugin; do not add an npm or upstream auto-update route.
 - `.worktrees/` — local checkouts; do not commit.
 
 ## Release naming

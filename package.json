@@ -1,13 +1,13 @@
 {
-  "name": "premiere-pro-mcp",
-  "mcpName": "io.github.leancoderkavy/premiere-pro",
-  "version": "1.22.0",
-  "description": "MCP server for Adobe Premiere Pro with 393 core AI video editing tools, a guarded After Effects MOGRT studio, and a capability-aware UXP bridge for supported Premiere workflows.",
+  "name": "zura-premiere-mcp",
+  "mcpName": "io.github.zuravfx/zura-premiere",
+  "version": "1.23.0",
+  "description": "Zura's local-first MCP for verified Adobe Premiere Pro editing workflows, with a local CEP connector and optional authenticated UXP support.",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
   "bin": {
-    "premiere-pro-mcp": "dist/index.js"
+    "zura-premiere-mcp": "dist/index.js"
   },
   "files": [
     "dist/**/*.js",
@@ -162,17 +162,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/leancoderkavy/premiere-pro-mcp.git"
+    "url": "git+https://github.com/ZURAVFX/zura-premiere-reels.git"
   },
-  "homepage": "https://premiere-pro-mcp.com/",
+  "homepage": "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels",
   "bugs": {
-    "url": "https://github.com/leancoderkavy/premiere-pro-mcp/issues"
+    "url": "https://github.com/ZURAVFX/zura-premiere-reels/issues"
   },
-  "funding": {
-    "type": "buymeacoffee",
-    "url": "https://buymeacoffee.com/leancoderkavy"
-  },
-  "author": "MCP for Adobe Premiere Pro contributors",
+  "author": "Zura",
+  "private": true,
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -197,7 +194,7 @@
     "creative-cloud",
     "premiere-pro-plugin",
     "claude-code",
-    "premiere-pro-mcp",
+    "zura-premiere-reels",
     "adobe-premiere-mcp",
     "premiere-mcp",
     "video-editing-mcp",
@@ -210,10 +207,6 @@
     "premiere-pro-extendscript"
   ],
   "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
   "engines": {
     "node": ">=20.19.0"
   },

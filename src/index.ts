@@ -4,8 +4,7 @@ import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/s
 import { createServer } from "./server.js";
 import { cleanupTempDir, getTempDir } from "./bridge/file-bridge.js";
 import { getTelemetry } from "./telemetry.js";
-import { execFileSync, spawnSync } from "child_process";
-import { existsSync } from "fs";
+import { execFileSync } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
 import { UxpWebSocketBridge } from "./bridge/uxp-websocket-bridge.js";
@@ -18,7 +17,6 @@ import {
 import { applyDoctorRepairPlan } from "./doctor-repairs.js";
 import { readEnvValue } from "./env-config.js";
 import { createLazyUxpStart, LazyUxpStart } from "./uxp-lazy-start.js";
-import { compareVersions, fetchLatestNpmVersion } from "./update.js";
 import { parseClientConfigAction, renderClientConfig } from "./client-config.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,7 +28,7 @@ const debugEnabled = /^(1|true|yes|on|debug)$/i.test(
 
 function debugLog(message: string): void {
   if (debugEnabled) {
-    console.error(`[premiere-pro-mcp] ${message}`);
+    console.error(`[zura-premiere-mcp] ${message}`);
   }
 }
 
@@ -51,88 +49,9 @@ function isLoopbackPortInUse(error: unknown): boolean {
   );
 }
 
-function npmInvocation(): { command: string; prefix: string[] } {
-  const candidates = [
-    process.env.npm_execpath,
-    path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js"),
-    path.join(path.dirname(path.dirname(process.execPath)), "lib", "node_modules", "npm", "bin", "npm-cli.js"),
-  ].filter((candidate): candidate is string => Boolean(candidate && existsSync(candidate)));
-
-  if (candidates.length > 0) return { command: process.execPath, prefix: [candidates[0]] };
-  return { command: process.platform === "win32" ? "npm.cmd" : "npm", prefix: [] };
-}
-
-function globalNpmRoot(): string | undefined {
-  const npm = npmInvocation();
-  const result = spawnSync(npm.command, [...npm.prefix, "root", "--global"], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  if (result.status !== 0 || !result.stdout) return undefined;
-  return path.resolve(result.stdout.trim());
-}
-
-function isGlobalNpmInstallation(globalRoot: string | undefined): boolean {
-  if (!globalRoot) return false;
-  const relative = path.relative(globalRoot, projectRoot);
-  return relative !== "" && !relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative);
-}
-
-async function checkForPackageUpdate(): Promise<{ currentVersion: string; latestVersion: string; updateAvailable: boolean }> {
-  const pkg = await import("../package.json", { with: { type: "json" } });
-  const currentVersion = String(pkg.default.version ?? "unknown");
-  const latestVersion = await fetchLatestNpmVersion(String(pkg.default.name ?? "premiere-pro-mcp"));
-  return {
-    currentVersion,
-    latestVersion,
-    updateAvailable: compareVersions(latestVersion, currentVersion) > 0,
-  };
-}
-
-async function runPackageUpdate(apply: boolean): Promise<void> {
-  let update;
-  try {
-    update = await checkForPackageUpdate();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error(`Could not check npm for an update: ${message}`);
-    process.exit(1);
-  }
-
-  if (!update.updateAvailable) {
-    console.log(`premiere-pro-mcp ${update.currentVersion} is current (npm latest: ${update.latestVersion}).`);
-    if (apply) console.log("To repair the Premiere connector, fully quit Premiere and run premiere-pro-mcp --install-cep.");
-    return;
-  }
-
-  if (!apply) {
-    console.log(`Update available: ${update.currentVersion} → ${update.latestVersion}. Run premiere-pro-mcp --update after fully quitting Premiere.`);
-    return;
-  }
-
-  if (!isGlobalNpmInstallation(globalNpmRoot())) {
-    console.error("This server is not an npm global installation, so it will not be replaced automatically.");
-    console.error("For a source checkout, fully quit Premiere and run: npm run update:source");
-    process.exit(1);
-  }
-
-  const npm = npmInvocation();
-  console.log(`Updating premiere-pro-mcp ${update.currentVersion} → ${update.latestVersion} and refreshing the Premiere connector...`);
-  try {
-    execFileSync(npm.command, [...npm.prefix, "install", "--global", "premiere-pro-mcp@latest"], {
-      stdio: "inherit",
-      windowsHide: true,
-    });
-    execFileSync(process.execPath, [__filename, "--install-cep"], {
-      stdio: "inherit",
-      cwd: projectRoot,
-      windowsHide: true,
-    });
-  } catch {
-    console.error("The package or connector update did not finish. Premiere must be fully closed before refreshing the connector.");
-    process.exit(1);
-  }
-  console.log("Update complete. Restart Premiere and your MCP client, then run verify_premiere_connection before editing.");
+function printUpdateInstructions(): void {
+  console.log("Zura Premiere Reels updates are distributed through the Codex plugin. Update the zura-premiere-reels plugin in Codex, then run its setup skill if the local MCP or Premiere panel needs repair.");
+  console.log("This command does not contact npm or replace the local MCP package.");
 }
 
 // Handle CLI flags
@@ -151,30 +70,30 @@ try {
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`
-premiere-pro-mcp — MCP server for Adobe Premiere Pro (391 default-profile tools)
+zura-premiere-mcp — local MCP for Adobe Premiere Pro
 
 Usage:
-  premiere-pro-mcp              Start the MCP server (stdio transport)
-  premiere-pro-mcp --install-cep   Install the CEP plugin into Premiere Pro
-  premiere-pro-mcp --uninstall-cep Remove this CEP plugin from Premiere Pro
-  premiere-pro-mcp --diagnose-cep  Check the CEP install, debug keys, and Premiere signature logs
-  premiere-pro-mcp --install-after-effects-cep   Install the dedicated CEP plugin into After Effects
-  premiere-pro-mcp --uninstall-after-effects-cep Remove this CEP plugin from After Effects
-  premiere-pro-mcp --diagnose-after-effects-cep  Check the After Effects CEP install and debug keys
-  premiere-pro-mcp --doctor        Check local install/configuration without reading a project
-  premiere-pro-mcp --doctor --json Print the same local check as machine-readable JSON
-  premiere-pro-mcp --doctor --plan-fixes Show a no-write, privacy-safe local repair plan
-  premiere-pro-mcp --doctor --apply-fixes Apply only safe planned local fixes; requires explicit Premiere-closed confirmation where needed
-  premiere-pro-mcp --doctor --apply-fixes --confirm-premiere-closed Confirm Premiere is fully closed before a connector repair
-  premiere-pro-mcp --support-bundle  Print a privacy-safe, machine-readable support bundle
-  premiere-pro-mcp --print-client-config <claude|cursor|vscode|codex> Print configuration for this installed copy; writes no files
-  premiere-pro-mcp --check-update    Check npm for a newer released local server
-  premiere-pro-mcp --update          Update an npm global install and refresh the CEP connector
-  premiere-pro-mcp --help          Show this help message
-  premiere-pro-mcp --version       Show version
+  zura-premiere-mcp              Start the MCP server (stdio transport)
+  zura-premiere-mcp --install-cep   Install the CEP plugin into Premiere Pro
+  zura-premiere-mcp --uninstall-cep Remove this CEP plugin from Premiere Pro
+  zura-premiere-mcp --diagnose-cep  Check the CEP install, debug keys, and Premiere signature logs
+  zura-premiere-mcp --install-after-effects-cep   Install the dedicated CEP plugin into After Effects
+  zura-premiere-mcp --uninstall-after-effects-cep Remove this CEP plugin from After Effects
+  zura-premiere-mcp --diagnose-after-effects-cep  Check the After Effects CEP install and debug keys
+  zura-premiere-mcp --doctor        Check local install/configuration without reading a project
+  zura-premiere-mcp --doctor --json Print the same local check as machine-readable JSON
+  zura-premiere-mcp --doctor --plan-fixes Show a no-write, privacy-safe local repair plan
+  zura-premiere-mcp --doctor --apply-fixes Apply only safe planned local fixes; requires explicit Premiere-closed confirmation where needed
+  zura-premiere-mcp --doctor --apply-fixes --confirm-premiere-closed Confirm Premiere is fully closed before a connector repair
+  zura-premiere-mcp --support-bundle  Print a privacy-safe, machine-readable support bundle
+  zura-premiere-mcp --print-client-config <claude|cursor|vscode|codex> Print configuration for this installed copy; writes no files
+  zura-premiere-mcp --check-update    Show the Codex plugin update path (no npm access)
+  zura-premiere-mcp --update          Show the Codex plugin update path (no package replacement)
+  zura-premiere-mcp --help          Show this help message
+  zura-premiere-mcp --version       Show version
 
 Environment variables:
-  PREMIERE_TEMP_DIR     Shared temp directory (default: OS temp + /premiere-mcp-bridge)
+  PREMIERE_TEMP_DIR     Shared bridge directory (default: per-user Adobe folder on Windows; OS temp elsewhere)
   PREMIERE_TIMEOUT_MS   Command timeout in ms (default: 30000)
   PREMIERE_MCP_CAPABILITIES  Comma-separated authority profile
   PREMIERE_MCP_TOOL_PACKS    Comma-separated discovery packs: full, essential, inspection, delivery, captions
@@ -184,7 +103,7 @@ Environment variables:
   PREMIERE_UXP_PORT     UXP loopback WebSocket port (default: 7777)
   AFTER_EFFECTS_MCP_TEMP_DIR  Shared AE bridge directory (default: OS temp + /after-effects-mcp-bridge)
 
-More info: https://github.com/leancoderkavy/premiere-pro-mcp
+More info: https://github.com/ZURAVFX/zura-premiere-reels
 `);
   process.exit(0);
 }
@@ -195,7 +114,7 @@ if (updateActions.length > 1) {
   process.exit(1);
 }
 if (updateActions.length === 1) {
-  await runPackageUpdate(updateActions[0] === "--update");
+  printUpdateInstructions();
   process.exit(0);
 }
 
@@ -229,7 +148,7 @@ if (args.includes("--doctor") || args.includes("--support-bundle")) {
     process.exit(1);
   }
   const pkg = await import("../package.json", { with: { type: "json" } }).catch(
-    () => ({ default: { name: "premiere-pro-mcp", version: "unknown", homepage: "https://premiere-pro-mcp.com/" } }),
+    () => ({ default: { name: "zura-premiere-mcp", version: "unknown", homepage: "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels" } }),
   );
   if (args.includes("--support-bundle")) {
     // A support bundle is JSON by default so it can be attached to an issue or
@@ -368,9 +287,9 @@ async function main() {
         debugLog(`UXP bridge listening on ws://${address.host}:${address.port}${address.path}`);
       },
       onBusy: () => console.error(
-        "[premiere-pro-mcp] UXP loopback port is busy; UXP tools stay unavailable and the bind is retried until it frees up.",
+        "[zura-premiere-mcp] UXP loopback port is busy; UXP tools stay unavailable and the bind is retried until it frees up.",
       ),
-      onError: (error) => console.error("[premiere-pro-mcp] UXP bridge failed to start:", error),
+      onError: (error) => console.error("[zura-premiere-mcp] UXP bridge failed to start:", error),
     });
   }
 
@@ -390,7 +309,7 @@ async function main() {
     : serveStdio(
       () => createServer(bridgeOptions, { uxpBridge, telemetry }),
       {
-        onerror: (error) => console.error("[premiere-pro-mcp] MCP stdio error:", error),
+        onerror: (error) => console.error("[zura-premiere-mcp] MCP stdio error:", error),
       },
     );
   if (protocolMode === "auto") debugLog("Server connected and ready");
@@ -410,6 +329,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("[premiere-pro-mcp] Fatal error:", err);
+  console.error("[zura-premiere-mcp] Fatal error:", err);
   process.exit(1);
 });

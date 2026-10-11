@@ -8,7 +8,7 @@ const BIN = join(process.cwd(), "dist", "index.js");
 describe("CLI flags", () => {
   it("--help prints usage and exits 0", () => {
     const output = execFileSync(process.execPath, [BIN, "--help"], { encoding: "utf-8" });
-    expect(output).toContain("premiere-pro-mcp");
+    expect(output).toContain("zura-premiere-mcp");
     expect(output).toContain("Usage:");
     expect(output).toContain("--install-cep");
     expect(output).toContain("--uninstall-cep");

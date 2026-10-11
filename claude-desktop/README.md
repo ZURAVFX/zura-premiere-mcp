@@ -1,6 +1,6 @@
-# Claude Desktop distribution
+# Zura Premiere Reels for Claude Desktop
 
-`premiere-pro-mcp-<version>.mcpb` is the one-file Claude Desktop extension.
+`zura-premiere-reels-<version>.mcpb` is the one-file Claude Desktop extension.
 It packages the server and its production dependencies, so an editor does not
 need to install Node.js, npm, or edit an MCP JSON file. Claude Desktop supplies
 the Node runtime when it launches the local stdio server.
@@ -23,7 +23,7 @@ stages only production dependencies with `npm ci --omit=dev`, validates the
 staged manifest with the pinned `@anthropic-ai/mcpb` CLI, and writes:
 
 ```text
-artifacts/premiere-pro-mcp-<version>.mcpb
+artifacts/zura-premiere-reels-<version>.mcpb
 ```
 
 `node scripts/validate-distribution.mjs --claude` is the fast manifest and
@@ -45,7 +45,7 @@ That field is optional. CEP-only setups (the Connector panel under
 **Window → Extensions**) do not use a token and have no token field — leave
 the Claude Desktop value blank. For the UXP plugin, generate any secret of at
 least 16 characters yourself, enter it in Claude Desktop, then enter the same
-value in Premiere under **Window → UXP Plugins → MCP for Adobe Premiere Pro →
+value in Premiere under **Window → UXP Plugins → Zura Advanced Bridge →
 Bridge token**. The MCPB maps the saved value to `PREMIERE_UXP_TOKEN` for the
 child server process; setting a Windows or macOS login-shell environment
 variable alone is not reliable because Claude Desktop controls the extension

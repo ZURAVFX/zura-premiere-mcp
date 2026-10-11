@@ -1,14 +1,14 @@
 {
-  "name": "premiere-pro-mcp",
+  "name": "zura-premiere-reels",
   "interface": {
-    "displayName": "Premiere Pro MCP"
+    "displayName": "Zura Premiere Reels"
   },
   "plugins": [
     {
-      "name": "premiere-pro",
+      "name": "zura-premiere-reels",
       "source": {
         "source": "local",
-        "path": "./plugins/premiere-pro"
+        "path": "./plugins/zura-premiere-reels"
       },
       "policy": {
         "installation": "AVAILABLE",

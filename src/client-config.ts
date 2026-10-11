@@ -3,7 +3,7 @@ import path from "node:path";
 export const CLIENT_CONFIG_TARGETS = ["claude", "cursor", "vscode", "codex"] as const;
 export type ClientConfigTarget = typeof CLIENT_CONFIG_TARGETS[number];
 
-const usage = "Usage: premiere-pro-mcp --print-client-config <claude|cursor|vscode|codex>. Use this action alone.";
+const usage = "Usage: zura-premiere-mcp --print-client-config <claude|cursor|vscode|codex>. Use this action alone.";
 
 /** Resolve this action before any installer, update, or server startup branch. */
 export function parseClientConfigAction(args: string[]): ClientConfigTarget | undefined {
@@ -35,10 +35,10 @@ export function renderClientConfig(
   }
   const entry = { command: nodeExecutable, args: [serverEntrypoint] };
   if (target === "codex") {
-    return `[mcp_servers.premiere-pro-leancoderkavy]\ncommand = ${JSON.stringify(entry.command)}\nargs = ${JSON.stringify(entry.args)}\n`;
+    return `[mcp_servers.zura-premiere-reels]\ncommand = ${JSON.stringify(entry.command)}\nargs = ${JSON.stringify(entry.args)}\n`;
   }
   const config = target === "vscode"
-    ? { servers: { "premiere-pro-leancoderkavy": { type: "stdio", ...entry } } }
-    : { mcpServers: { "premiere-pro-leancoderkavy": entry } };
+    ? { servers: { "zura-premiere-reels": { type: "stdio", ...entry } } }
+    : { mcpServers: { "zura-premiere-reels": entry } };
   return `${JSON.stringify(config, null, 2)}\n`;
 }

@@ -81,7 +81,7 @@ try {
   httpAuth = readHttpAuthConfiguration(process.env);
   admissionSettings = readHttpAdmissionSettings(process.env);
 } catch (error) {
-  console.error("[premiere-pro-mcp] Refusing to start:", error instanceof Error ? error.message : error);
+  console.error("[zura-premiere-mcp] Refusing to start:", error instanceof Error ? error.message : error);
   process.exit(1);
   throw error;
 }
@@ -105,16 +105,16 @@ const mediaWatchRegistry = new MediaWatchRegistry();
 const mcpHandler = createMcpHandler(
   () => createServer(bridgeOptions, { telemetry, contextRepository: projectContextRepository, mediaWatchRegistry }),
   {
-    onerror: (error) => console.error("[premiere-pro-mcp] MCP handler error:", error),
+    onerror: (error) => console.error("[zura-premiere-mcp] MCP handler error:", error),
   },
 );
 const handleMcpRequest = toNodeHandler(mcpHandler, {
-  onerror: (error) => console.error("[premiere-pro-mcp] MCP Node adapter error:", error),
+  onerror: (error) => console.error("[zura-premiere-mcp] MCP Node adapter error:", error),
 });
 
 const tempDir = getTempDir(bridgeOptions);
-console.error(`[premiere-pro-mcp] Starting HTTP server on port ${PORT}...`);
-console.error(`[premiere-pro-mcp] Temp directory: ${tempDir}`);
+console.error(`[zura-premiere-mcp] Starting HTTP server on port ${PORT}...`);
+console.error(`[zura-premiere-mcp] Temp directory: ${tempDir}`);
 cleanupTempDir(bridgeOptions);
 
 // Each request gets its own transport+server instance (stateless per-request model)
@@ -131,7 +131,7 @@ const httpServer = http.createServer(async (req, res) => {
   // Health check
   if (req.method === "GET" && pathname === "/health") {
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    res.end(JSON.stringify({ status: "ok", service: "premiere-pro-mcp", version: SERVER_VERSION }));
+    res.end(JSON.stringify({ status: "ok", service: "zura-premiere-mcp", version: SERVER_VERSION }));
     return;
   }
 
@@ -302,7 +302,7 @@ const httpServer = http.createServer(async (req, res) => {
       duration_ms: Date.now() - requestStartedAt,
       error_type: telemetryErrorType(err),
     });
-    console.error("[premiere-pro-mcp] Request error:", err);
+    console.error("[zura-premiere-mcp] Request error:", err);
     if (!res.headersSent) {
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Internal server error" }));
@@ -316,19 +316,19 @@ httpServer.keepAliveTimeout = admissionSettings.keepAliveTimeoutMs;
 httpServer.maxRequestsPerSocket = admissionSettings.maxRequestsPerSocket;
 
 httpServer.listen(PORT, HTTP_HOST, () => {
-  console.error(`[premiere-pro-mcp] HTTP server listening on ${HTTP_HOST}:${PORT}`);
-  console.error(`[premiere-pro-mcp] MCP endpoint: http://${HTTP_HOST}:${PORT}/mcp`);
+  console.error(`[zura-premiere-mcp] HTTP server listening on ${HTTP_HOST}:${PORT}`);
+  console.error(`[zura-premiere-mcp] MCP endpoint: http://${HTTP_HOST}:${PORT}/mcp`);
   if (oauthResourceServer) {
-    console.error(`[premiere-pro-mcp] Auth: OAuth bearer tokens required`);
+    console.error(`[zura-premiere-mcp] Auth: OAuth bearer tokens required`);
   } else if (httpAuth.authToken) {
-    console.error(`[premiere-pro-mcp] Auth: Bearer token required`);
+    console.error(`[zura-premiere-mcp] Auth: Bearer token required`);
   } else {
-    console.error(`[premiere-pro-mcp] Auth: disabled outside production for an explicit local/test override`);
+    console.error(`[zura-premiere-mcp] Auth: disabled outside production for an explicit local/test override`);
   }
 });
 
 async function shutdown(signal: string) {
-  console.error(`[premiere-pro-mcp] ${signal} received, shutting down...`);
+  console.error(`[zura-premiere-mcp] ${signal} received, shutting down...`);
   httpServer.close();
   await mcpHandler.close();
   await projectContextRepository.close();

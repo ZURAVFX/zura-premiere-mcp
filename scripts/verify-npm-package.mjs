@@ -116,7 +116,7 @@ let installDir;
 let packDir;
 
 try {
-  packDir = mkdtempSync(join(tmpdir(), "premiere-pro-mcp-pack-output-"));
+  packDir = mkdtempSync(join(tmpdir(), "zura-premiere-reels-pack-output-"));
   const packed = JSON.parse(
     runNpm(["pack", "--json", "--ignore-scripts", "--pack-destination", packDir]),
   );
@@ -143,16 +143,16 @@ try {
     throw new Error(`npm package is missing required files: ${missing.join(", ")}`);
   }
 
-  installDir = mkdtempSync(join(tmpdir(), "premiere-pro-mcp-pack-"));
+  installDir = mkdtempSync(join(tmpdir(), "zura-premiere-reels-pack-"));
   runNpm(["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball], {
     cwd: installDir,
   });
 
-  const installedCli = join(installDir, "node_modules", "premiere-pro-mcp", "dist", "index.js");
+  const installedCli = join(installDir, "node_modules", "zura-premiere-mcp", "dist", "index.js");
   if (!existsSync(installedCli)) {
     throw new Error("isolated package installation did not contain the CLI entrypoint");
   }
-  const installedPackageRoot = join(installDir, "node_modules", "premiere-pro-mcp");
+  const installedPackageRoot = join(installDir, "node_modules", "zura-premiere-mcp");
   const installedRegistry = JSON.parse(readFileSync(join(
     installedPackageRoot,
     "dist",

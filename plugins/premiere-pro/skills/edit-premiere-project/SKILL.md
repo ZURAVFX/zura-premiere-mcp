@@ -93,6 +93,8 @@ For other mutations:
 
 ## Editing judgment
 
+- Keep vertical framing static within each continuous shot. When the active speaker or scene area changes, use a direct cut to a new shot with its own static crop. Never animate Position to drift or pan between speakers, and never use Position keyframes as a transition. Allow only an optional, extremely slow and smooth within-shot adjustment when it materially improves composition.
+- Automatically remove obvious dead space and sections that are clearly unengaging and add nothing to the edit; judge them in full context. A slower delivery or useful pause alone is not a reason to cut. Preserve useful pauses, reactions, breaths, emphasis, and context. Use a few clean cuts at natural thought boundaries; avoid repeated micro-cuts and jump-cut chains, and do not cut simply to make the pace faster.
 - Prefer reversible operations and conservative parameter values.
 - Do not invent creative choices the user did not request when those choices affect
   pacing, story, color, mix, typography, or delivery requirements.

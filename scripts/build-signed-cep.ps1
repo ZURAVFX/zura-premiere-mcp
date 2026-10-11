@@ -16,7 +16,7 @@ $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 $outputDir = Split-Path -Parent $OutputPath
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 
-$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("premiere-pro-mcp-zxp-" + [guid]::NewGuid().ToString("N"))
+$temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("zura-premiere-reels-zxp-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $temporaryRoot | Out-Null
 
 try {
@@ -37,8 +37,8 @@ try {
     $CertificatePassword = [guid]::NewGuid().ToString("N")
   }
   if (-not $CertificatePath) {
-    $CertificatePath = Join-Path $temporaryRoot "premiere-pro-mcp-release.p12"
-    & $ZxpSignCmdPath -selfSignedCert US California "MCP for Adobe Premiere Pro" "MCP for Adobe Premiere Pro" $CertificatePassword $CertificatePath
+    $CertificatePath = Join-Path $temporaryRoot "zura-premiere-reels-release.p12"
+    & $ZxpSignCmdPath -selfSignedCert US California "Zura Premiere Reels" "Zura Premiere Reels" $CertificatePassword $CertificatePath
     if ($LASTEXITCODE -ne 0) {
       throw "ZXPSignCmd failed to create the release certificate."
     }

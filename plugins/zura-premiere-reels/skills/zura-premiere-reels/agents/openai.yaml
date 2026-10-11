@@ -1,0 +1,7 @@
+interface:
+  display_name: "Zura Premiere Reels"
+  short_description: "Make engaging edits in Premiere Pro"
+  default_prompt: "Set up Zura Premiere Reels if needed, then edit this local footage as requested."
+
+policy:
+  allow_implicit_invocation: true

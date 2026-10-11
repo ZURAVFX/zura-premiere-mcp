@@ -46,8 +46,8 @@ function defaultRunInstaller(platform: NodeJS.Platform, projectRoot: string): vo
   const script = path.join(projectRoot, "scripts", platform === "win32" ? "install-cep.ps1" : "install-cep.sh");
   if ((platform === "win32" || platform === "darwin") && !existsSync(script)) {
     throw new Error(
-      "The connector installer script is not bundled here (the Claude Desktop extension omits scripts/). "
-      + "Install the signed MCPBridgeCEP.zxp from the GitHub release, or run `npx -y premiere-pro-mcp --install-cep`.",
+      "The Premiere panel installer is not bundled here (the Claude Desktop extension omits scripts/). "
+      + "Install the Zura Premiere Reels Codex plugin and run its setup skill to install the panel.",
     );
   }
   if (platform === "win32") {

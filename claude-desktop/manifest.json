@@ -1,22 +1,22 @@
 {
   "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.4.schema.json",
   "manifest_version": "0.4",
-  "name": "premiere-pro-mcp",
-  "display_name": "MCP for Adobe Premiere Pro",
-  "version": "1.22.0",
-  "description": "Control a local Adobe Premiere Pro project through MCP.",
+  "name": "zura-premiere-mcp",
+  "display_name": "Zura Premiere Reels",
+  "version": "1.23.0",
+  "description": "Edit a local Adobe Premiere Pro project with Zura Premiere Reels.",
   "long_description": "Inspect projects, assemble and modify timelines, manage media, effects, audio and captions, and export deliverables through a local bridge to Adobe Premiere Pro.",
   "author": {
-    "name": "MCP for Adobe Premiere Pro contributors",
-    "url": "https://github.com/leancoderkavy/premiere-pro-mcp"
+    "name": "Zura",
+    "url": "https://github.com/ZURAVFX/zura-premiere-reels"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/leancoderkavy/premiere-pro-mcp.git"
+    "url": "https://github.com/ZURAVFX/zura-premiere-reels.git"
   },
-  "homepage": "https://premiere-pro-mcp.com/",
-  "documentation": "https://premiere-pro-mcp.com/docs/",
-  "support": "https://github.com/leancoderkavy/premiere-pro-mcp/issues",
+  "homepage": "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels",
+  "documentation": "https://github.com/OA-Motion/OA_Motion_Software_Plugins/tree/main/software/Zura-Premiere-Reels",
+  "support": "https://github.com/ZURAVFX/zura-premiere-reels/issues",
   "server": {
     "type": "node",
     "entry_point": "server/dist/index.js",
@@ -33,7 +33,7 @@
     "premiere_uxp_token": {
       "type": "string",
       "title": "Premiere UXP Token",
-      "description": "Optional. Only needed for the UXP plugin (Premiere: Window → UXP Plugins → MCP for Adobe Premiere Pro → Bridge token). Generate any 16+ character secret yourself and enter the same value here. The CEP Connector panel does not show or need a token. Leave blank to use CEP only.",
+      "description": "Optional. Only needed for the Zura Advanced Bridge UXP plugin (Premiere: Window → UXP Plugins → Zura Advanced Bridge → Bridge token). Generate any 16+ character secret yourself and enter the same value here. The Zura Premiere Reels panel does not show or need a token. Leave blank to use the standard panel.",
       "sensitive": true,
       "required": false
     },

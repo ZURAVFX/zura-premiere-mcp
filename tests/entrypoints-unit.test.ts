@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
-import { dirname } from "node:path";
 import { RequestBodyTooLargeError } from "../src/http-admission.js";
-
-const currentVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version as string;
-const nextVersion = `${Number(currentVersion.split(".")[0]) + 1}.0.0`;
 
 const mocks = vi.hoisted(() => ({
   requestHandler: undefined as undefined | ((req: any, res: any) => Promise<void>),
@@ -23,7 +18,6 @@ const mocks = vi.hoisted(() => ({
   uxpStop: vi.fn(async () => {}),
   execFileSync: vi.fn(),
   spawnSync: vi.fn(),
-  fetchLatestNpmVersion: vi.fn(async () => "1.14.8"),
   fsExists: vi.fn(() => false),
   fsStat: vi.fn(() => ({ isDirectory: () => false, isFile: () => true })),
   fsReadFileSync: vi.fn(),
@@ -106,10 +100,6 @@ vi.mock("../src/bridge/uxp-websocket-bridge.js", () => ({
     address() { return { host: "127.0.0.1", port: 7788, path: "/premiere-uxp" }; }
   },
 }));
-vi.mock("../src/update.js", () => ({
-  compareVersions: (left: string, right: string) => left.localeCompare(right),
-  fetchLatestNpmVersion: mocks.fetchLatestNpmVersion,
-}));
 vi.mock("node:child_process", () => ({ execFileSync: mocks.execFileSync, spawnSync: mocks.spawnSync }));
 vi.mock("node:fs", async (original) => {
   const actual = await original<typeof import("node:fs")>();
@@ -135,7 +125,6 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   mocks.requestHandler = undefined;
-  mocks.fetchLatestNpmVersion.mockResolvedValue("1.14.8");
   mocks.spawnSync.mockReturnValue({ status: 1, stdout: "" });
   mocks.fsExists.mockReturnValue(false);
   mocks.fsStat.mockReturnValue({ isDirectory: () => false, isFile: () => true });
@@ -237,46 +226,20 @@ describe("stdio CLI entry point", () => {
     expect(JSON.parse(String(log.mock.calls[0][0])).applied).toBe(false);
   });
 
-  it("checks for a newer release and updates a global npm installation", async () => {
+  it("directs updates through the Codex plugin without replacing the local package", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    mocks.fetchLatestNpmVersion.mockResolvedValueOnce(nextVersion);
-    let loaded = await importCli(["--check-update"]);
+    const loaded = await importCli(["--check-update"]);
     await expect(loaded.promise).rejects.toThrow("EXIT:0");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(`${currentVersion} → ${nextVersion}`));
-
-    vi.resetModules();
-    vi.clearAllMocks();
-    log.mockClear();
-    mocks.fetchLatestNpmVersion.mockResolvedValueOnce(nextVersion);
-    mocks.spawnSync.mockReturnValue({ status: 0, stdout: `${dirname(process.cwd())}\n` });
-    loaded = await importCli(["--update"]);
-    await expect(loaded.promise).rejects.toThrow("EXIT:0");
-    expect(mocks.execFileSync).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.arrayContaining(["install", "--global", "premiere-pro-mcp@latest"]),
-      expect.objectContaining({ stdio: "inherit" }),
-    );
-    expect(mocks.execFileSync).toHaveBeenCalledWith(
-      process.execPath,
-      expect.arrayContaining(["--install-cep"]),
-      expect.objectContaining({ cwd: process.cwd() }),
-    );
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Update the zura-premiere-reels plugin in Codex"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("does not contact npm"));
+    expect(mocks.execFileSync).not.toHaveBeenCalled();
   });
 
-  it("rejects conflicting update actions and leaves a current installation untouched", async () => {
+  it("rejects conflicting update actions", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    let loaded = await importCli(["--check-update", "--update"]);
+    const loaded = await importCli(["--check-update", "--update"]);
     await expect(loaded.promise).rejects.toThrow("EXIT:1");
     expect(error).toHaveBeenCalledWith(expect.stringContaining("only one update action"));
-
-    vi.resetModules();
-    vi.clearAllMocks();
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    mocks.fetchLatestNpmVersion.mockResolvedValueOnce(currentVersion);
-    loaded = await importCli(["--update"]);
-    await expect(loaded.promise).rejects.toThrow("EXIT:0");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("is current"));
-    expect(mocks.execFileSync).not.toHaveBeenCalled();
   });
 
   it("rejects CEP installation on unsupported platforms", async () => {
@@ -321,7 +284,7 @@ describe("stdio CLI entry point", () => {
     await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
     expect(mocks.serveStdio).not.toHaveBeenCalled();
     expect(error).toHaveBeenCalledWith(
-      "[premiere-pro-mcp] Fatal error:",
+      "[zura-premiere-mcp] Fatal error:",
       expect.objectContaining({ message: "PREMIERE_MCP_PROTOCOL_MODE must be either auto or legacy." }),
     );
   });
@@ -385,7 +348,7 @@ describe("stdio CLI entry point", () => {
     await vi.waitFor(() => expect(mocks.serveStdio).toHaveBeenCalledOnce());
     process.stdin.emit("data", '{"jsonrpc":"2.0","id":1,"method":"initialize"}\n');
     await vi.waitFor(() => expect(error).toHaveBeenCalledWith(
-      "[premiere-pro-mcp] UXP bridge failed to start:",
+      "[zura-premiere-mcp] UXP bridge failed to start:",
       expect.objectContaining({ message: "permission denied" }),
     ));
     expect(exit).not.toHaveBeenCalled();
@@ -398,7 +361,7 @@ describe("stdio CLI entry point", () => {
     const exit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
     await import("../src/index.js");
     await vi.waitFor(() => expect(error).toHaveBeenCalledWith(
-      "[premiere-pro-mcp] Fatal error:",
+      "[zura-premiere-mcp] Fatal error:",
       expect.objectContaining({ message: "connect failed" }),
     ));
     expect(exit).toHaveBeenCalledWith(1);
@@ -709,7 +672,7 @@ describe("HTTP entry point", () => {
     const handler = await loadHttp();
     const res = response();
     await handler({ method: "GET", url: "/health", headers: {} }, res);
-    expect(JSON.parse(res.body)).toEqual({ status: "ok", service: "premiere-pro-mcp", version: "9.9.9-test" });
+    expect(JSON.parse(res.body)).toEqual({ status: "ok", service: "zura-premiere-mcp", version: "9.9.9-test" });
   });
 
   it("redirects website paths on public aliases to premiere-pro-mcp.com, preserving path and query", async () => {

@@ -298,7 +298,7 @@ export function getSequenceTools(bridgeOptions: BridgeOptions) {
     },
 
     auto_reframe_sequence: {
-      description: "Auto-reframe a sequence into a new sequence of target_width x target_height. Premiere derives the new sequence from the source height (a 1080p source at 9:16 comes out 607x1080), so the tool then sets the requested frame size and verifies it; the Auto Reframe effect refits to the new size.",
+      description: "Auto-reframe a sequence into a new sequence of target_width x target_height. Premiere derives the new sequence from the source height (a 1080p source at 9:16 comes out 607x1080), so the tool then sets the requested frame size and verifies it; the Auto Reframe effect refits to the new size. Do not use this operation for Zura Premiere Reels: its generated path can animate independently of ordinary Motion Position readback. Zura reels use static native Motion Position and Scale per source shot, with direct cuts at real camera changes.",
       parameters: {
         type: "object" as const,
         properties: {

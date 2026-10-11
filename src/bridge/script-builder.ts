@@ -7,7 +7,7 @@ import { expectedProjectPath } from "./project-guard.js";
 import { undoTrackingEnabled } from "./undo-tracking.js";
 
 const HELPERS = `
-// === MCP Bridge Helpers (auto-prepended) ===
+// === Zura Bridge Helpers (auto-prepended) ===
 
 // ExtendScript (ES3) has no native JSON object. Tool scripts use __jsonStringify
 // directly, but LLM-authored code via execute_extendscript reaches for
@@ -2811,7 +2811,7 @@ function __error(msg, extraData) {
   return data ? __jsonStringify({ success: false, error: message, data: data }) : __jsonStringify({ success: false, error: message });
 }
 
-// === End MCP Bridge Helpers ===
+// === End Zura Bridge Helpers ===
 `;
 
 /**

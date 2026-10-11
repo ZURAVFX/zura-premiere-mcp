@@ -8,30 +8,29 @@ const readJson = (path: string) =>
   JSON.parse(readFileSync(join(root, path), "utf8"));
 
 describe("Codex plugin package", () => {
-  it("keeps the plugin and MCP package versions aligned", () => {
+  it("exposes the Zura plugin and bundled local MCP", () => {
     const pkg = readJson("package.json");
-    const publishedVersion = readPublishedVersion();
-    const plugin = readJson("plugins/premiere-pro/.codex-plugin/plugin.json");
-    const mcp = readJson("plugins/premiere-pro/.mcp.json");
+    const plugin = readJson("plugins/zura-premiere-reels/.codex-plugin/plugin.json");
+    const mcp = readJson("plugins/zura-premiere-reels/.mcp.json");
 
-    expect(plugin.name).toBe("premiere-pro");
-    expect(plugin.version).toBe(pkg.version);
+    expect(pkg.name).toBe("zura-premiere-mcp");
+    expect(plugin.name).toBe("zura-premiere-reels");
+    expect(plugin.interface.displayName).toBe("Zura Premiere Reels");
     expect(plugin.skills).toBe("./skills/");
     expect(plugin.mcpServers).toBe("./.mcp.json");
-    expect(mcp.mcpServers["premiere-pro"].args).toContain(
-      `premiere-pro-mcp@${publishedVersion}`,
-    );
+    expect(mcp.mcpServers["zura-premiere-reels"].command).toBe("zura-premiere-mcp");
+    expect(mcp.mcpServers["zura-premiere-reels"].args).toEqual([]);
   });
 
   it("publishes the plugin through the repository marketplace", () => {
     const marketplace = readJson(".agents/plugins/marketplace.json");
     const entry = marketplace.plugins.find(
-      (plugin: { name: string }) => plugin.name === "premiere-pro",
+      (plugin: { name: string }) => plugin.name === "zura-premiere-reels",
     );
 
-    expect(marketplace.name).toBe("premiere-pro-mcp");
+    expect(marketplace.name).toBe("zura-premiere-reels");
     expect(entry).toMatchObject({
-      source: { source: "local", path: "./plugins/premiere-pro" },
+      source: { source: "local", path: "./plugins/zura-premiere-reels" },
       policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
       category: "Creativity",
     });
@@ -125,7 +124,7 @@ describe("Claude distributions", () => {
 
     expect(manifest).toMatchObject({
       manifest_version: "0.4",
-      name: "premiere-pro-mcp",
+      name: "zura-premiere-mcp",
       version: pkg.version,
       server: {
         type: "node",

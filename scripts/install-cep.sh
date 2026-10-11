@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install the MCP for Adobe Premiere Pro CEP plugin
+# Install the Zura Premiere Reels CEP panel
 # This script creates a symlink from the CEP extensions directory to this project's cep-plugin folder.
 
 set -e
@@ -24,7 +24,7 @@ else
   PLUGIN_SRC="$PROJECT_DIR/cep-plugin"
   PLUGIN_NAME="MCPBridgeCEP"
   HOST_LABEL="Premiere Pro"
-  HOST_MENU="MCP for Adobe Premiere Pro"
+  HOST_MENU="Zura Premiere Reels"
 fi
 
 # Detect OS
