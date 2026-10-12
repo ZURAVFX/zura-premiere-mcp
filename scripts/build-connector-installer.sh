@@ -5,7 +5,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONNECTOR_PACKAGE="${CONNECTOR_PACKAGE:-$PROJECT_DIR/artifacts/MCPBridgeCEP.zxp}"
 OUTPUT_DIRECTORY="${OUTPUT_DIRECTORY:-$PROJECT_DIR/artifacts/connector-installers}"
 REQUIRE_SIGNING="${REQUIRE_SIGNING:-false}"
-VERSION="$(node -p "require('$PROJECT_DIR/package.json').version")"
+VERSION="$(node -p 'require(process.argv[1]).version' "$PROJECT_DIR/package.json")"
 
 if [[ ! -f "$CONNECTOR_PACKAGE" ]]; then
   echo "Verified connector package not found: $CONNECTOR_PACKAGE" >&2

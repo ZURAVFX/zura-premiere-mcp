@@ -15,7 +15,7 @@ It is not affiliated with Adobe. The package is built and installed locally from
 
 ## Install from this checkout
 
-When the user asks to install from this folder, follow INSTALL.md. On Windows, run `INSTALL-ZURA-PREMIERE-MCP.ps1` to build and install the local server and CEP panel, then register the MCP with Codex. Do not substitute the upstream npm package.
+When the user asks to install from this folder, follow INSTALL.md. On Windows, run `INSTALL-ZURA-PREMIERE-MCP.ps1`; on macOS, run `bash INSTALL-ZURA-PREMIERE-MCP.command`. These build and install the local server and CEP panel, then register the MCP with Codex. The macOS installer accepts `--skip-codex` or `--plugin-managed` when another client or plugin owns registration. Do not substitute the upstream npm package.
 
 Production path: local Node.js MCP server (stdio) talking to a **CEP** panel inside Premiere through private file-based IPC (`.jsx` command files and `.json` responses). **UXP** is a capability-aware preview backend for Premiere 25.6+ documented APIs. A failed UXP mutation must never be silently retried through CEP or the undocumented QE DOM.
 

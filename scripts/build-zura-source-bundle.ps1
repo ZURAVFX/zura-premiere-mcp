@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 $outputDirectory = Split-Path -Parent $OutputPath
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 $tempBundlePath = Join-Path $outputDirectory ([guid]::NewGuid().ToString("N") + ".tmp.zip")
-$rootFiles = @("package.json", "package-lock.json", "tsconfig.json", "README.md", "LICENSE", "CHANGELOG.md", "public-product-manifest.json")
+$rootFiles = @("package.json", "package-lock.json", "tsconfig.json", "README.md", "INSTALL.md", "INSTALL-ZURA-PREMIERE-MCP.ps1", "INSTALL-ZURA-PREMIERE-MCP.command", "LICENSE", "CHANGELOG.md", "public-product-manifest.json")
 $sourceDirectories = @("src", "scripts", "cep-plugin", "after-effects-cep-plugin", "uxp-plugin", "benchmarks\uxp-hybrid", "docs")
 $files = [System.Collections.Generic.Dictionary[string, System.IO.FileInfo]]::new([System.StringComparer]::Ordinal)
 
@@ -64,7 +64,10 @@ try {
     "src/index.ts",
     "cep-plugin/CSXS/manifest.xml",
     "scripts/install-cep.ps1",
-    "scripts/install-zura-premiere-mcp.ps1"
+    "scripts/install-zura-premiere-mcp.ps1",
+    "INSTALL-ZURA-PREMIERE-MCP.command",
+    "scripts/install-cep.sh",
+    "scripts/install-zura-premiere-mcp.sh"
   )
   $missing = @($requiredEntries | Where-Object { -not $entries.Contains($_) })
   if ($missing.Count -gt 0) { throw "Source bundle is missing required files: $($missing -join ', ')" }
