@@ -72,6 +72,23 @@ describe("bounded agent tool discovery", () => {
 });
 
 describe("agent guidance over MCP", () => {
+  it("advertises a complete compact reels route over MCP without forbidden fallbacks", async () => {
+    vi.stubEnv("PREMIERE_MCP_CAPABILITIES", "inspect,edit,export,filesystem");
+    vi.stubEnv("PREMIERE_MCP_TELEMETRY", "off");
+    const server = createServer({}, { toolPacks: "reels" });
+    const client = new Client({ name: "reels-pack-test", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+      const tools = (await client.listTools()).tools;
+      const names = new Set(tools.map((tool) => tool.name));
+      expect(tools.length).toBeLessThanOrEqual(60);
+      for (const name of ["import_media", "create_subclip", "create_sequence_from_clips", "set_sequence_settings", "plan_centered_shot_framing", "set_static_clip_framing_batch", "import_image_sequence", "export_sequence", "verify_delivery_file", "start_batch_encode"]) expect(names.has(name), name).toBe(true);
+      for (const name of ["auto_reframe_sequence", "consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(names.has(name), name).toBe(false);
+      expect(client.getInstructions()).toContain("30-minute deadline");
+      expect(client.getInstructions()).toContain("plan_centered_shot_framing -> set_static_clip_framing_batch -> capture_frame");
+    } finally { await client.close(); await server.close(); }
+  });
   it.each(["full", "inspection"])("matches discovery to tools/list in the %s pack", async (pack) => {
     vi.stubEnv("PREMIERE_MCP_CAPABILITIES", "inspect,edit,export,filesystem");
     vi.stubEnv("PREMIERE_MCP_TELEMETRY", "off");

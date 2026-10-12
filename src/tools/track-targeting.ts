@@ -899,6 +899,95 @@ export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
       },
     },
 
+    set_static_clip_framing_batch: {
+      description: "Apply static uniform Motion Scale and Position to up to 50 clips in the active sequence in one CEP command. Preflights every target, refuses Auto Reframe and existing Motion animation, converts pixel Position into host units, and verifies every write. Failure may leave a verified prefix applied; inspect the receipt before retrying. No visual verification is implied.",
+      parameters: {
+        type: "object" as const, additionalProperties: false,
+        properties: {
+          sequence_id: { type: "string", minLength: 1, maxLength: 256, description: "Current active sequence ID; refuses a different sequence before any write." },
+          clips: {
+            type: "array", minItems: 1, maxItems: 50, description: "Unique current clip node IDs and the verified pilot's static Motion values.",
+            items: {
+              type: "object", additionalProperties: false,
+              properties: {
+                node_id: { type: "string", minLength: 1, maxLength: 256, description: "Current timeline video clip node ID." },
+                scale: { type: "number", exclusiveMinimum: 0, maximum: 10000, description: "Uniform Motion Scale percent, net of verified source prescale." },
+                x: { type: "number", description: "Motion Position X in sequence pixels, not a subject-center coordinate." },
+                y: { type: "number", description: "Motion Position Y in sequence pixels." },
+              }, required: ["node_id", "scale", "x", "y"],
+            },
+          },
+        }, required: ["sequence_id", "clips"],
+      },
+      handler: async (args: { sequence_id: string; clips: Array<{ node_id: string; scale: number; x: number; y: number }> }) => {
+        if (!args || typeof args.sequence_id !== "string" || !args.sequence_id || args.sequence_id.length > 256 || !Array.isArray(args.clips) || args.clips.length < 1 || args.clips.length > 50) return { success: false, error: "Provide the current sequence_id and 1 through 50 clip framings." };
+        const ids = new Set<string>();
+        for (const clip of args.clips) {
+          if (!clip || typeof clip.node_id !== "string" || !clip.node_id || clip.node_id.length > 256 || ids.has(clip.node_id) || !Number.isFinite(clip.scale) || clip.scale <= 0 || clip.scale > 10000 || !Number.isFinite(clip.x) || !Number.isFinite(clip.y)) return { success: false, error: "Clip IDs must be unique and Motion values finite; Scale must be >0 and <=10000." };
+          ids.add(clip.node_id);
+        }
+        const script = buildToolScript(`
+          var sequence = app.project.activeSequence;
+          if (!sequence || String(sequence.sequenceID) !== "${escapeForExtendScript(args.sequence_id)}") return __error("Active sequence changed; nothing was changed.");
+          var entries = [${args.clips.map((clip) => `{node_id:"${escapeForExtendScript(clip.node_id)}",scale:${clip.scale},x:${clip.x},y:${clip.y}}`).join(",")}];
+          var targets = [];
+          for (var i = 0; i < entries.length; i++) {
+            var found = __findClip(entries[i].node_id);
+            if (!found || found.trackType !== "video") return __error("Video clip not found: " + entries[i].node_id + "; nothing was changed.");
+            var motion = null;
+            for (var c = 0; c < found.clip.components.numItems; c++) {
+              var component = found.clip.components[c];
+              var effectName = String(component.matchName || "") + String(component.displayName || "");
+              if (effectName.toLowerCase().replace(/[^a-z]/g, "").indexOf("autoreframe") >= 0) return __error("Auto Reframe remains on " + entries[i].node_id + "; reconstruct this shot from original media. Nothing was changed.");
+              if (component.matchName === "AE.ADBE Motion" || component.displayName === "Motion") motion = component;
+            }
+            if (!motion) return __error("Motion component missing; nothing was changed.");
+            var point = null;
+            var height = null;
+            var width = null;
+            var pointCount = 0;
+            var heightCount = 0;
+            var widthCount = 0;
+            for (var p = 0; p < motion.properties.numItems; p++) {
+              var property = motion.properties[p];
+              if (__videoIntrinsicPropertyMatches(property, "Position")) { point = property; pointCount++; }
+              else if (__videoIntrinsicPropertyMatches(property, "Scale") || __videoIntrinsicPropertyMatches(property, "Scale Height")) { height = property; heightCount++; }
+              else if (__videoIntrinsicPropertyMatches(property, "Scale Width")) { width = property; widthCount++; }
+            }
+            var uniform = __isUniformScale(motion);
+            if (pointCount !== 1 || heightCount !== 1 || widthCount > 1 || (!uniform && widthCount !== 1)) return __error("Missing or ambiguous Motion properties; nothing was changed.");
+            var properties = [point, height];
+            if (!uniform) properties.push(width);
+            for (var a = 0; a < properties.length; a++) {
+              try { if (properties[a].isTimeVarying()) return __error("Animated Motion on " + entries[i].node_id + "; reconstruct a static source shot. Nothing was changed."); }
+              catch (eAnimation) { return __error("Motion animation state is unreadable; nothing was changed."); }
+            }
+            var units = __motionPointScale(point, __sequenceFrameSize(sequence));
+            if (!units) return __error("Sequence dimensions unavailable; nothing was changed.");
+            targets.push({ motion: motion, point: point, properties: properties, units: units });
+          }
+          var verified = [];
+          for (var j = 0; j < entries.length; j++) {
+            var entry = entries[j];
+            var target = targets[j];
+            var failureData = { verifiedClips: verified, failedNodeId: entry.node_id, mutationAttempted: true, mutationOutcome: "unknown", outcome: "committed_unverified", verified: false };
+            try {
+              var scaled = __setMotionScale(target.motion, entry.scale);
+              if (!scaled.ok) return __error(scaled.error, failureData);
+              var written = [entry.x * target.units.x, entry.y * target.units.y];
+              target.point.setValue(written, true);
+              var read = target.point.getValue();
+              if (!read || read.length < 2 || Math.abs(read[0] - written[0]) > 1e-4 * (target.units.normalized ? 1 : 1000) || Math.abs(read[1] - written[1]) > 1e-4 * (target.units.normalized ? 1 : 1000)) return __error("Position readback mismatch.", failureData);
+              for (var v = 0; v < target.properties.length; v++) if (target.properties[v].isTimeVarying()) return __error("Motion became animated.", failureData);
+              verified.push({ node_id: entry.node_id, scale: entry.scale, x: entry.x, y: entry.y, hostValue: [read[0], read[1]], hostNormalized: target.units.normalized, static: true });
+            } catch (eWrite) { return __error("Framing write failed: " + eWrite.toString(), failureData); }
+          }
+          return __result({ sequenceId: String(sequence.sequenceID), verifiedClips: verified, verified: true, verificationScope: "Static Motion property readback only; inspect rendered images for composition and black edges." });
+        `);
+        return sendCommand(script, bridgeOptions);
+      },
+    },
+
     set_clip_position: {
       description:
         "Set the Position property on a video clip's Motion effect using English or measured Spanish built-in names, then read it back. Values are in pixels.",

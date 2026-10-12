@@ -4,6 +4,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$setupStarted = Get-Date
+$env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User") + ";" + $env:PATH
+Write-Host "[1/5] Checking the local bundled source and prerequisites..."
 
 function Require-NativeSuccess([string]$Action) {
   if ($LASTEXITCODE -ne 0) { throw "$Action failed with exit code $LASTEXITCODE." }
@@ -65,10 +68,17 @@ if ($package.name -ne "zura-premiere-mcp") { throw "Unexpected MCP package '$($p
 
 $codexNeedsRestart = $false
 $node = Get-Command node.exe -ErrorAction SilentlyContinue
-if (-not $node) {
+$nodeCompatible = $false
+if ($node) {
+  $nodeVersion = [version](& $node.Source -p "process.versions.node")
+  Require-NativeSuccess "Checking Node.js"
+  $nodeCompatible = $nodeVersion -ge [version]"20.19.0"
+}
+if (-not $nodeCompatible) {
   $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
   if (-not $winget) { throw "Node.js 20.19 or newer is required. Install Node.js LTS, then run setup again." }
-  & $winget.Source install --id OpenJS.NodeJS.LTS --exact --accept-package-agreements --accept-source-agreements --silent
+  $nodeInstallAction = if ($node) { "upgrade" } else { "install" }
+  & $winget.Source $nodeInstallAction --id OpenJS.NodeJS.LTS --exact --accept-package-agreements --accept-source-agreements --silent
   Require-NativeSuccess "Installing Node.js LTS"
   $codexNeedsRestart = $true
   $programNode = Join-Path $env:ProgramFiles "nodejs"
@@ -107,34 +117,50 @@ if ($npmGlobalBin) {
 
 $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
 if (-not $npm) { throw "npm.cmd was not found beside Node.js. Repair the Node.js installation and run setup again." }
+Write-Host "[2/5] Checking locked build dependencies..."
+$env:npm_config_fetch_retries = "1"
+$env:npm_config_fetch_timeout = "60000"
 $dependencyLock = Join-Path $repoRoot "node_modules\.package-lock.json"
 $lockFile = Join-Path $repoRoot "package-lock.json"
-if (-not (Test-Path -LiteralPath $dependencyLock) -or
-    (Get-Item -LiteralPath $lockFile).LastWriteTimeUtc -gt (Get-Item -LiteralPath $dependencyLock).LastWriteTimeUtc) {
+$dependencyStatePath = Join-Path $repoRoot "node_modules\.zura-source-lock.sha256"
+$lockHash = (Get-FileHash -LiteralPath $lockFile -Algorithm SHA256).Hash
+$installedLockHash = if (Test-Path -LiteralPath $dependencyStatePath) { (Get-Content -LiteralPath $dependencyStatePath -Raw).Trim() } else { "" }
+$dependenciesChanged = -not (Test-Path -LiteralPath $dependencyLock) -or $installedLockHash -ne $lockHash
+if ($dependenciesChanged) {
   Push-Location $repoRoot
   try {
-    & $npm.Source ci
+    & $npm.Source ci --no-audit --no-fund
     Require-NativeSuccess "Installing the locked MCP build dependencies"
+    Set-Content -LiteralPath $dependencyStatePath -Value $lockHash -Encoding ASCII
   } finally { Pop-Location }
 }
 
 Push-Location $repoRoot
 try {
-  & $npm.Source run build
-  Require-NativeSuccess "Building the Premiere MCP"
-  & $npm.Source install --global $repoRoot
+  Write-Host "[3/5] Building the bundled MCP (reusing a verified matching build when possible)..."
+  $node = Get-Command node.exe -ErrorAction Stop
+  $buildState = (& $node.Source (Join-Path $repoRoot "scripts\setup-build-state.mjs") $repoRoot | ConvertFrom-Json)
+  Require-NativeSuccess "Checking the MCP build fingerprint"
+  if ($dependenciesChanged -or -not $buildState.reusable) {
+    & $npm.Source run build
+    Require-NativeSuccess "Building the Premiere MCP"
+    $buildState | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $repoRoot ".zura-build-state.json") -Encoding ASCII
+  } else { Write-Host "The source, dependencies, Node version and built entrypoints match; skipped rebuilding." }
+  & $npm.Source install --global --no-audit --no-fund $repoRoot
   Require-NativeSuccess "Installing the Premiere MCP for the current user"
 } finally { Pop-Location }
 
 $mcpCommand = Get-Command zura-premiere-mcp.cmd -ErrorAction SilentlyContinue
 if (-not $mcpCommand) { $mcpCommand = Get-Command zura-premiere-mcp -ErrorAction SilentlyContinue }
 if (-not $mcpCommand) { throw "The installed zura-premiere-mcp command was not found on PATH." }
+Write-Host "[4/5] Installing the Premiere panel..."
 & $mcpCommand.Source --install-cep
 Require-NativeSuccess "Installing the Premiere CEP connector"
 
 $codex = Get-Command codex.cmd -ErrorAction SilentlyContinue
 if (-not $codex) { $codex = Get-Command codex -ErrorAction SilentlyContinue }
 if (-not $codex) { throw "The Codex CLI was not found on PATH, so the local MCP could not be registered." }
+Write-Host "[5/5] Verifying plugin-managed registration..."
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE ".codex" }
 $configPath = Join-Path $codexHome "config.toml"
 $configText = if (Test-Path -LiteralPath $configPath) { Get-Content -LiteralPath $configPath -Raw -Encoding UTF8 } else { "" }
@@ -151,6 +177,7 @@ if (-not $PluginManaged) {
 }
 
 Set-Content -LiteralPath $sourceRecord -Value $repoRoot -Encoding UTF8
+Write-Host ("Setup completed in {0:N1} minutes." -f ((Get-Date) - $setupStarted).TotalMinutes)
 if ($PluginManaged) {
   Write-Host "Zura Premiere MCP and Premiere panel are installed."
   Write-Host "Restart Premiere Pro if it was already open, so it loads the new panel. Do not close it automatically."

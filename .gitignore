@@ -46,3 +46,4 @@ npm-debug.log*
 # Local browser verification artifacts
 .playwright-cli/
 output/playwright/
+/.zura-build-state.json

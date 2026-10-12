@@ -1,5 +1,6 @@
 import { MAX_SPEAKER_REGIONS, MAX_FRAME_DIMENSION, planActiveSpeakerReframe, planSpeakerCheckerboard } from "../ai/speaker-layout.js";
 import { WORD_TIMELINE_PARAMETER } from "../ai/word-timeline.js";
+import { planCenteredShotFraming } from "../ai/shot-framing.js";
 
 const FRAME_RATE_PARAMETER = { type: "number", minimum: 1, maximum: 240, description: "Sequence frame rate used to snap times to frames; defaults to 30." } as const;
 
@@ -28,6 +29,40 @@ function wrap(plan: (args: Record<string, unknown>) => unknown) {
 
 export function getSpeakerLayoutTools() {
   return {
+    plan_centered_shot_framing: {
+      description: "Plan centered static Motion framing for up to 100 measured shots. Keeps centers at (0.5, 0.5) and flags impossible fits instead of offsetting subjects. Local-only; never changes Premiere or inspects pixels. Verify a rendered pilot before batching.",
+      parameters: {
+        type: "object" as const,
+        additionalProperties: false,
+        properties: {
+          source_frame: frameSizeParameter("Source display dimensions in square pixels; group mixed-resolution shots separately."),
+          target_frame: frameSizeParameter("Target sequence dimensions; defaults to 1080x1920."),
+          padding: { type: "number", minimum: 0, maximum: 0.4, description: "Desired symmetric margin around the subject; defaults to 0.12 and reduces near source edges." },
+          source_prescale: { type: "number", minimum: 0.001, maximum: 1000, description: "Verified scale applied before Motion, such as Scale to Frame Size; defaults to 1 for unmodified source clips." },
+          anchor: {
+            type: "object", additionalProperties: false, description: "Verified Motion Anchor Point as source-frame fractions; defaults to the source center.",
+            properties: { x: { type: "number", minimum: 0, maximum: 1, description: "Horizontal anchor fraction." }, y: { type: "number", minimum: 0, maximum: 1, description: "Vertical anchor fraction." } }, required: ["x", "y"],
+          },
+          shots: {
+            type: "array", minItems: 1, maxItems: 100, description: "One measured face/upper-body region per real continuous source shot; reuse its crop for repeats of the same shot.",
+            items: {
+              type: "object", additionalProperties: false,
+              properties: {
+                shot_id: { type: "string", minLength: 1, maxLength: 128, description: "Unique ledger ID identifying the source shot." },
+                subject: {
+                  type: "object", additionalProperties: false, description: "Subject rectangle measured in original source-frame fractions (not the cropped preview).",
+                  properties: {
+                    x: { type: "number", minimum: 0, maximum: 1, description: "Source left fraction." }, y: { type: "number", minimum: 0, maximum: 1, description: "Source top fraction." },
+                    width: { type: "number", exclusiveMinimum: 0, maximum: 1, description: "Subject width fraction." }, height: { type: "number", exclusiveMinimum: 0, maximum: 1, description: "Subject height fraction." },
+                  }, required: ["x", "y", "width", "height"],
+                },
+              }, required: ["shot_id", "subject"],
+            },
+          },
+        }, required: ["source_frame", "shots"],
+      },
+      handler: wrap(planCenteredShotFraming),
+    },
     plan_speaker_checkerboard: {
       description: "Plan a speaker checkerboard (each speaker's turns on their own video/audio track) from a caller-supplied word timeline. Returns frame-snapped segments, split points, track assignments, and the add_track/razor_all_tracks/move_clip_to_track routes. Local-only; never changes Premiere.",
       parameters: {

@@ -47,8 +47,8 @@ function checkSchema(schema: Record<string, unknown>, path: string, describedPro
 describe("getSpeakerLayoutTools", () => {
   const tools = getSpeakerLayoutTools();
 
-  it("exposes exactly the two plan tools with local-only descriptions", () => {
-    expect(Object.keys(tools).sort()).toEqual(["plan_active_speaker_reframe", "plan_speaker_checkerboard"]);
+  it("exposes the three plan tools with local-only descriptions", () => {
+    expect(Object.keys(tools).sort()).toEqual(["plan_active_speaker_reframe", "plan_centered_shot_framing", "plan_speaker_checkerboard"]);
     for (const tool of Object.values(tools)) {
       expect(tool.description.length).toBeLessThan(400);
       expect(tool.description).toMatch(/Local-only; never changes Premiere/);

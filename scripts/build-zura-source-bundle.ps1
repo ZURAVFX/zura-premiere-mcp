@@ -1,6 +1,7 @@
-param([string]$OutputPath)
+param([string]$OutputPath, [string]$SourceRevision)
 
 $ErrorActionPreference = "Stop"
+if ($SourceRevision -and $SourceRevision -notmatch "^[a-fA-F0-9]{40}$") { throw "SourceRevision must be a full Git commit SHA." }
 
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
@@ -82,4 +83,15 @@ finally { $zip.Dispose() }
 [System.IO.File]::Delete($tempBundlePath)
 $hash = (Get-FileHash -LiteralPath $OutputPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $size = (Get-Item -LiteralPath $OutputPath).Length
+if ($SourceRevision) {
+  $package = Get-Content -LiteralPath (Join-Path $root "package.json") -Raw | ConvertFrom-Json
+  $manifest = [ordered]@{
+    source_repository = "https://github.com/ZURAVFX/zura-premiere-mcp"
+    source_commit = $SourceRevision.ToLowerInvariant()
+    source_package_version = $package.version
+    bundled_source_sha256 = $hash
+    bundled_source_bytes = $size
+  }
+  $manifest | ConvertTo-Json | Set-Content -LiteralPath ([System.IO.Path]::ChangeExtension($OutputPath, ".manifest.json")) -Encoding ASCII
+}
 Write-Host "Built $OutputPath ($size bytes, $($files.Count) files, SHA-256 $hash)"

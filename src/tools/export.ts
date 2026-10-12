@@ -914,13 +914,18 @@ export function getExportTools(bridgeOptions: BridgeOptions) {
           threshold: { type: "number", description: "Scene-score threshold from 0.01 through 1 (default: 0.3)" },
           minimum_interval_seconds: { type: "number", description: "Keep only the strongest event within this interval (default: 0.25)" },
           maximum_events: { type: "number", description: "Maximum returned changes (default: 500; maximum: 2000)" },
+          start_seconds: { type: "number", minimum: 0, description: "Optional start of a selected source range; defaults to zero. Returned cut times remain source-relative." },
+          duration_seconds: { type: "number", exclusiveMinimum: 0, maximum: 600, description: "Optional bounded source sample (at most 600 seconds). For reels, analyze only shortlisted ranges instead of decoding the entire recording." },
         },
         required: ["media_path"],
       },
-      handler: async (args: { media_path: string; threshold?: number; minimum_interval_seconds?: number; maximum_events?: number }) => {
+      handler: async (args: { media_path: string; threshold?: number; minimum_interval_seconds?: number; maximum_events?: number; start_seconds?: number; duration_seconds?: number }) => {
         const threshold = args.threshold ?? 0.3;
         const minimumInterval = args.minimum_interval_seconds ?? 0.25;
         const maximumEvents = args.maximum_events ?? 500;
+        const startSeconds = args.start_seconds ?? 0;
+        if (!Number.isFinite(startSeconds) || startSeconds < 0) return { success: false, error: "start_seconds must be finite and nonnegative" };
+        if (args.duration_seconds !== undefined && (!Number.isFinite(args.duration_seconds) || args.duration_seconds <= 0 || args.duration_seconds > 600)) return { success: false, error: "duration_seconds must be greater than zero and at most 600" };
         if (!Number.isFinite(threshold) || threshold < 0.01 || threshold > 1) return { success: false, error: "threshold must be from 0.01 through 1" };
         if (!Number.isFinite(minimumInterval) || minimumInterval < 0 || minimumInterval > 60) return { success: false, error: "minimum_interval_seconds must be from 0 through 60" };
         if (!Number.isInteger(maximumEvents) || maximumEvents < 1 || maximumEvents > 2000) return { success: false, error: "maximum_events must be an integer from 1 through 2000" };
@@ -928,16 +933,17 @@ export function getExportTools(bridgeOptions: BridgeOptions) {
         if (!existsSync(mediaPath) || !statSync(mediaPath).isFile()) return { success: false, error: `Video file not found on disk: ${mediaPath}` };
         try {
           const result = await execFileAsync("ffmpeg", [
-            "-nostdin", "-hide_banner", "-i", mediaPath,
+            "-nostdin", "-hide_banner", ...(startSeconds ? ["-ss", String(startSeconds)] : []), "-i", mediaPath,
+            ...(args.duration_seconds !== undefined ? ["-t", String(args.duration_seconds)] : []),
             "-vf", `select='gt(scene,${threshold})',showinfo,metadata=print`,
             "-an", "-f", "null", "-",
           ], { timeout: VIDEO_QC_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
-          const all = parseSceneChangeOutput(`${result.stdout}\n${result.stderr}`, minimumInterval);
+          const all = parseSceneChangeOutput(`${result.stdout}\n${result.stderr}`, minimumInterval).map((event) => ({ ...event, timeSeconds: event.timeSeconds + startSeconds }));
           const sceneChanges = all.slice(0, maximumEvents);
           return {
             success: true,
             data: {
-              mediaPath, threshold, minimumIntervalSeconds: minimumInterval,
+              mediaPath, threshold, minimumIntervalSeconds: minimumInterval, startSeconds, sampleSeconds: args.duration_seconds ?? null,
               totalDetected: all.length, truncated: all.length > sceneChanges.length, sceneChanges,
               verificationScope: "Local source-file pixel analysis only. Times are source-relative probabilities, not verified editorial cuts or Premiere timeline positions.",
             },

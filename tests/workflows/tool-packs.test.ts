@@ -6,6 +6,11 @@ import {
 } from "../../src/workflows/tool-packs.js";
 
 describe("workflow tool packs", () => {
+  it("provides the focused reels route without animated reframing or media copying", () => {
+    const selection = resolveToolPacks("reels", "explicit");
+    for (const name of ["import_image_sequence", "plan_centered_shot_framing", "set_static_clip_framing_batch", "start_batch_encode", "verify_delivery_file"]) expect(isToolInSelectedPacks(name, selection)).toBe(true);
+    for (const name of ["auto_reframe_sequence", "consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(isToolInSelectedPacks(name, selection)).toBe(false);
+  });
   it("keeps the backwards-compatible full catalog when unconfigured", () => {
     expect(resolveToolPacks(undefined, "default")).toEqual({
       source: "default",
