@@ -123,6 +123,21 @@ if ($npmGlobalBin) {
 
 $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
 if (-not $npm) { throw "npm.cmd was not found beside Node.js. Repair the Node.js installation and run setup again." }
+$normalPath = $env:PATH
+$gitForBuild = Get-Command git.exe -ErrorAction SilentlyContinue
+# npm prepends node_modules/.bin to PATH for scripts. A long inherited Windows
+# PATH can then exceed cmd.exe's limit and make even `node` disappear. Use a
+# short, verified build PATH for npm, restoring the full session PATH after.
+$buildPath = @(
+  $nodeDirectory,
+  (Split-Path -Parent $npm.Source),
+  $npmGlobalBin,
+  $(if ($gitForBuild) { Split-Path -Parent $gitForBuild.Source }),
+  (Join-Path $env:SystemRoot "System32"),
+  $env:SystemRoot,
+  (Join-Path $env:SystemRoot "System32\Wbem")
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -Unique
+$env:PATH = $buildPath -join [System.IO.Path]::PathSeparator
 Write-Host "[2/5] Checking locked build dependencies..."
 $env:npm_config_fetch_retries = "1"
 $env:npm_config_fetch_timeout = "60000"
@@ -155,6 +170,7 @@ try {
   & $npm.Source install --global --no-audit --no-fund $repoRoot
   Require-NativeSuccess "Installing the Premiere MCP for the current user"
 } finally { Pop-Location }
+$env:PATH = $nodeDirectory + [System.IO.Path]::PathSeparator + $normalPath
 
 $mcpCommand = Get-Command zura-premiere-mcp.cmd -ErrorAction SilentlyContinue
 if (-not $mcpCommand) { $mcpCommand = Get-Command zura-premiere-mcp -ErrorAction SilentlyContinue }
