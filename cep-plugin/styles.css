@@ -21,7 +21,7 @@
 
 html, body {
   width: 100%;
-  min-width: 280px;
+  min-width: 0;
   height: 100%;
   min-height: 0;
   margin: 0;
@@ -46,8 +46,11 @@ button { -webkit-appearance: none; }
   flex-direction: column;
   gap: 14px;
   width: 100%;
+  max-width: 560px;
   height: 100%;
   min-height: 0;
+  margin: 0 auto;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 0 14px 16px;
   scrollbar-color: var(--border) var(--black);
@@ -68,6 +71,7 @@ button { -webkit-appearance: none; }
   border-bottom: 1px solid var(--border);
   background: var(--black);
 }
+.panel-header > * { min-width: 0; }
 
 .brand-mark {
   display: grid;
@@ -97,6 +101,7 @@ button { -webkit-appearance: none; }
   color: var(--text-secondary);
   font-size: 11px;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 .auto-start > span { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
 
@@ -252,9 +257,23 @@ button:focus-visible, summary:focus-visible, input:focus-visible, #log:focus-vis
 @media (max-width: 330px) {
   .panel-shell { gap: 11px; padding-right: 10px; padding-left: 10px; }
   .panel-header { margin-right: -10px; margin-left: -10px; padding-right: 10px; padding-left: 10px; }
-  .brand-copy h1 { font-size: 16px; }
-  .auto-start { gap: 4px; padding: 4px 6px; font-size: 11px; }
+  .brand-copy h1 { font-size: 15px; }
+  .brand-copy p { font-size: 11px; }
+  .auto-start { gap: 4px; padding: 4px 6px; font-size: 10px; }
   .bridge-status { padding: 12px; }
+}
+
+@media (max-width: 280px) {
+  .panel-header { flex-wrap: wrap; row-gap: 8px; }
+  .auto-start { margin-left: 44px; }
+  .action-row { grid-template-columns: 1fr; }
+}
+
+@media (max-height: 360px) {
+  .panel-shell { gap: 9px; padding-bottom: 10px; }
+  .panel-header { min-height: 48px; padding-top: 6px; padding-bottom: 6px; }
+  .bridge-status { min-height: 60px; padding-top: 8px; padding-bottom: 8px; }
+  .advanced { margin-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -65,6 +65,7 @@ try {
     "src/index.ts",
     "cep-plugin/CSXS/manifest.xml",
     "scripts/install-cep.ps1",
+    "scripts/caption-studio-presets.mjs",
     "scripts/install-zura-premiere-mcp.ps1",
     "INSTALL-ZURA-PREMIERE-MCP.command",
     "INSTALL-ZURA-PREMIERE-MCP.mjs",
