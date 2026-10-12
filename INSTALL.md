@@ -1,5 +1,15 @@
 # Install Zura Premiere MCP
 
+For an assisted install on either Windows or macOS, copy the [Codex installation prompt in the README](README.md#install-with-codex-mac-or-windows). It checks platform prerequisites and clones the GitHub source before running setup.
+
+With Node.js 20.19 or newer and the Codex CLI available, open a terminal in this repository and use the same command on both platforms:
+
+```sh
+node INSTALL-ZURA-PREMIERE-MCP.mjs
+```
+
+This detects the operating system and launches its native installer. `npm run setup` is equivalent. The platform-specific alternatives below remain supported.
+
 On Windows, open this repository in Codex and ask it to run `INSTALL-ZURA-PREMIERE-MCP.ps1`. The installer checks for Node.js, installs the local MCP and Premiere panel, and registers the server with Codex. It may install Git or Node.js LTS with WinGet if a prerequisite is missing.
 
 Restart Premiere Pro if it was open during installation, then start a new Codex chat. Premiere Pro must already be installed and licensed.

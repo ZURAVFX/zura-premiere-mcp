@@ -29,7 +29,7 @@ jobs:
       - name: Verify macOS source installation without a Premiere host
         if: matrix.os == 'macos-latest' && matrix.node == 24
         shell: bash
-        run: bash INSTALL-ZURA-PREMIERE-MCP.command --skip-codex
+        run: node INSTALL-ZURA-PREMIERE-MCP.mjs --skip-codex
       - name: Audit dependency lockfile
         if: matrix.os == 'windows-latest' && matrix.node == 22
         run: npm audit --audit-level=moderate

@@ -6,20 +6,30 @@ Zura Premiere MCP is a local Model Context Protocol server and connector for Ado
 
 The server uses a local Node.js process and a Premiere CEP panel. An optional authenticated UXP bridge exposes additional documented Premiere operations. The MCP can be installed and used on its own.
 
+## Install with Codex (Mac or Windows)
+
+Copy this entire message into Codex on either operating system:
+
+```text
+Install Zura Premiere MCP from https://github.com/ZURAVFX/zura-premiere-mcp on this computer. Detect whether this is Windows or macOS. Check for Git, Node.js 20.19 or newer, npm and the Codex CLI. On Windows, use WinGet for missing Git or Node.js prerequisites. On macOS, use an existing package manager for missing Node.js LTS, or guide me through installing it. Resolve any missing Codex CLI before continuing. Clone the repository into a permanent user-writable folder, preserving any existing checkout changes. From the repository root, run node INSTALL-ZURA-PREMIERE-MCP.mjs. Install the Premiere panel and register this local MCP with Codex; do not substitute the upstream npm package. Do not close apps automatically. Tell me which apps need restarting, then verify the Premiere connection once I reopen the panel.
+```
+
+The shared command detects the operating system and runs the matching Windows PowerShell or macOS Bash installer. It builds and registers the local MCP, installs the Premiere CEP panel, and configures the current Codex user. Premiere Pro must already be installed and licensed. Restart Premiere if it was already running during installation, then open a new Codex chat to load the MCP tools.
+
 ## Install on Windows
 
-Paste this into Codex:
+The Codex prompt above handles Windows prerequisites. To run the native installer directly from a checkout in PowerShell:
 
-> Install Zura Premiere MCP from https://github.com/ZURAVFX/zura-premiere-mcp on this Windows PC. Check for Git, Node.js LTS and WinGet, install any missing prerequisites with WinGet, clone the repository, then run `INSTALL-ZURA-PREMIERE-MCP.ps1`. Register the local MCP with Codex and install the Premiere panel. Guide me only if I need to approve a Windows prompt, then confirm which apps need restarting.
-
-The installer builds and registers the local MCP, installs the Premiere CEP panel, and configures the current Codex user. It does not install Adobe Premiere Pro. Restart Premiere if it was already running during installation, then open a new Codex chat to load the MCP tools.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\INSTALL-ZURA-PREMIERE-MCP.ps1
+```
 
 ## Install on macOS
 
 Install Node.js 20.19 or newer (LTS recommended) and the Codex CLI, then clone this repository or download and extract its source. In Terminal, open the repository folder and run:
 
 ```bash
-bash INSTALL-ZURA-PREMIERE-MCP.command
+node INSTALL-ZURA-PREMIERE-MCP.mjs
 ```
 
 The installer builds the local server, installs it under `~/Library/Application Support/Adobe/ZuraPremiereMCP`, copies the CEP panel into your user Library, and registers it with Codex using absolute paths. It requires no `sudo` or global npm permissions and uses the installed Node.js on Intel and Apple Silicon Macs. Keep Node.js installed at that location; rerun setup after moving or replacing it.
@@ -40,13 +50,13 @@ The server does not upload footage or operate a hosted Premiere session. A tool 
 
 ## Source setup
 
-For a local checkout, run:
+After cloning or downloading this repository and installing Node.js 20.19 or newer, run this same command in PowerShell on Windows or Terminal on macOS:
 
-```powershell
-.\INSTALL-ZURA-PREMIERE-MCP.ps1
+```sh
+node INSTALL-ZURA-PREMIERE-MCP.mjs
 ```
 
-On macOS, run `bash INSTALL-ZURA-PREMIERE-MCP.command` instead. Both installers build this repository's local MCP and install its Premiere panel. For manual setup without the full installer, run `npm ci`, `npm run build`, and `npm run install-cep`, then print an absolute-path client configuration with `node dist/index.js --print-client-config <client>`.
+`npm run setup` runs the same launcher. The native entrypoints remain available: `INSTALL-ZURA-PREMIERE-MCP.ps1` on Windows and `bash INSTALL-ZURA-PREMIERE-MCP.command` on macOS. For manual setup without the full installer, run `npm ci`, `npm run build`, and `npm run install-cep`, then print an absolute-path client configuration with `node dist/index.js --print-client-config <client>`.
 
 ## Development
 
