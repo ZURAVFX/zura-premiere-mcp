@@ -25,7 +25,7 @@ if [[ -z "${HOME:-}" || "$HOME" != /* ]]; then
 fi
 echo "[1/5] Checking macOS source and prerequisites..."
 # Finder-launched clients may omit both Intel and Apple Silicon Homebrew paths.
-export PATH="$HOME/.local/bin:/opt/homebrew/opt/node@24/bin:/usr/local/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH:/opt/homebrew/opt/node@24/bin:/usr/local/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin"
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   echo "Node.js 20.19 or newer and npm are required. Install Node.js LTS, then run setup again." >&2
   exit 1
