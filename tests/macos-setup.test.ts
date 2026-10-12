@@ -26,7 +26,7 @@ function fixture() {
   mkdirSync(join(checkout, "src"));
   mkdirSync(home);
   mkdirSync(bin);
-  for (const file of ["INSTALL-ZURA-PREMIERE-MCP.command", "scripts/install-zura-premiere-mcp.sh", "package.json"]) {
+  for (const file of ["INSTALL-ZURA-PREMIERE-MCP.command", "scripts/install-zura-premiere-mcp.sh", "scripts/setup-build-state.mjs", "package.json", "package-lock.json", "tsconfig.json"]) {
     cpSync(join(root, file), join(checkout, file));
   }
   writeFileSync(join(checkout, "src/index.ts"), "// source checkout marker\n");
@@ -38,6 +38,15 @@ function fixture() {
     appendFileSync(process.env.MOCK_LOG, JSON.stringify({ command, args }) + "\\n");
     if (process.env.MOCK_FAILURE === command + ":" + args[0] ||
         process.env.MOCK_FAILURE === args[1]) process.exit(9);
+    if (command === "npm" && args[0] === "ci") {
+      mkdirSync("node_modules", {recursive:true});
+      writeFileSync("node_modules/.package-lock.json", "{}");
+    }
+    if (command === "npm" && args[0] === "run") {
+      mkdirSync("dist/resources", {recursive:true});
+      writeFileSync("dist/index.js", "// built");
+      writeFileSync("dist/resources/adobe-uxp-coverage.json", "{}");
+    }
     if (command === "npm" && args[0] === "install" && !process.env.MOCK_MISSING_ENTRYPOINT) {
       const prefix = args[args.indexOf("--prefix") + 1];
       const dist = join(prefix, "lib/node_modules/zura-premiere-mcp/dist");
@@ -67,6 +76,7 @@ function fixture() {
         shift
         exec "$REAL_NODE" -e 'Object.defineProperty(process.versions, "node", {value: process.env.MOCK_NODE_VERSION || process.versions.node});'"$code" "$@" ;;
       -p) printf '%s\\n' "$MOCK_NODE_PATH" ;;
+      scripts/setup-build-state.mjs) exec "$REAL_NODE" "$@" ;;
       *) exec "$REAL_NODE" "$MOCK_HANDLER" node "$@" ;;
     esac
   `);
@@ -133,6 +143,9 @@ describe.skipIf(!bash)("macOS source setup", () => {
     expect(resolve(commands[5].args[4])).toBe(join(setup.bin, "node"));
     expect(resolve(commands[5].args[5])).toBe(setup.entrypoint);
     expect(readFileSync(join(setup.prefix, "source-root.txt"), "utf8").trim()).toBe(shellPath(setup.checkout));
+    const runtime = JSON.parse(readFileSync(join(setup.prefix, "runtime.json"), "utf8"));
+    expect(resolve(runtime.entrypoint)).toBe(setup.entrypoint);
+    expect(resolve(runtime.node)).toBe(join(setup.bin, "node"));
   });
 
   it.each(["--skip-codex", "--plugin-managed"])("leaves client registration unchanged with %s", option => {
@@ -194,5 +207,19 @@ describe.skipIf(!bash)("macOS source setup", () => {
     expect(setup.run(["--help"]).status).toBe(0);
     expect(setup.run(["--invalid"]).status).not.toBe(0);
     expect(setup.commands()).toEqual([]);
+  });
+
+  it("reuses dependencies and a matching build, then rebuilds on source changes", () => {
+    const setup = fixture();
+    expect(setup.run().status).toBe(0);
+    const firstCalls = setup.commands().length;
+    const second = setup.run();
+    expect(second.status, second.output).toBe(0);
+    expect(second.output).toContain("skipped rebuilding");
+    expect(setup.commands().slice(firstCalls).filter(call => call.command === "npm").map(call => call.args[0])).toEqual(["install"]);
+    writeFileSync(join(setup.checkout, "src/index.ts"), "// changed source\n");
+    const previousCalls = setup.commands().length;
+    expect(setup.run().status).toBe(0);
+    expect(setup.commands().slice(previousCalls).filter(call => call.command === "npm").map(call => call.args[0])).toEqual(["run", "install"]);
   });
 });
