@@ -214,11 +214,11 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.1.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@posthog/core": "1.56.1",
-    "@posthog/types": "1.413.0",
-    "acorn": "^8.15.0",
+    "@posthog/core": "1.57.3",
+    "@posthog/types": "1.415.2",
+    "acorn": "^8.19.0",
     "jose": "^6.2.10",
-    "posthog-node": "5.55.0",
+    "posthog-node": "5.55.1",
     "ws": "^8.22.0",
     "zod": "^4.4.3"
   },
