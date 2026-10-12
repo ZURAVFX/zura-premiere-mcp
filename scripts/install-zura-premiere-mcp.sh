@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+SECONDS=0
 
 REGISTER_CODEX=true
 for arg in "$@"; do
@@ -22,6 +23,9 @@ if [[ -z "${HOME:-}" || "$HOME" != /* ]]; then
   echo "HOME must be an absolute path to the current user's home directory." >&2
   exit 1
 fi
+echo "[1/5] Checking macOS source and prerequisites..."
+# Finder-launched clients may omit both Intel and Apple Silicon Homebrew paths.
+export PATH="$HOME/.local/bin:$PATH:/opt/homebrew/opt/node@24/bin:/usr/local/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin"
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   echo "Node.js 20.19 or newer and npm are required. Install Node.js LTS, then run setup again." >&2
   exit 1
@@ -55,17 +59,34 @@ INSTALL_DIR="$HOME/Library/Application Support/Adobe/ZuraPremiereMCP"
 SERVER_ENTRYPOINT="$INSTALL_DIR/lib/node_modules/zura-premiere-mcp/dist/index.js"
 
 cd "$PROJECT_DIR"
-npm ci
-npm run build
+export npm_config_fetch_retries=1 npm_config_fetch_timeout=60000
+echo "[2/5] Checking locked build dependencies..."
+LOCK_HASH="$(node -e 'const fs=require("node:fs"),crypto=require("node:crypto"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync("package-lock.json")).digest("hex"));')"
+DEPENDENCIES_CHANGED=false
+if [[ ! -f node_modules/.package-lock.json || ! -f node_modules/.zura-source-lock.sha256 || "$(cat node_modules/.zura-source-lock.sha256)" != "$LOCK_HASH" ]]; then
+  npm ci --no-audit --no-fund
+  printf '%s\n' "$LOCK_HASH" > node_modules/.zura-source-lock.sha256
+  DEPENDENCIES_CHANGED=true
+fi
+echo "[3/5] Building the bundled MCP..."
+BUILD_STATE="$(node scripts/setup-build-state.mjs "$PROJECT_DIR")"
+if [[ "$DEPENDENCIES_CHANGED" == true ]] || ! node -e 'process.exit(JSON.parse(process.argv[1]).reusable ? 0 : 1)' "$BUILD_STATE"; then
+  npm run build
+  printf '%s\n' "$BUILD_STATE" > .zura-build-state.json
+else
+  echo "The source, dependencies, Node version and built entrypoints match; skipped rebuilding."
+fi
 # An explicit user prefix avoids sudo and works with either Intel or Apple Silicon Node.
-npm install --global --prefix "$INSTALL_DIR" --install-links "$PROJECT_DIR"
+npm install --global --prefix "$INSTALL_DIR" --install-links "$PROJECT_DIR" --no-audit --no-fund
 if [[ ! -f "$SERVER_ENTRYPOINT" ]]; then
   echo "The installed MCP entrypoint was not found: $SERVER_ENTRYPOINT" >&2
   exit 1
 fi
+echo "[4/5] Installing and checking the Premiere panel..."
 "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT" --install-cep
 "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT" --diagnose-cep
 
+echo "[5/5] Verifying the local runtime and registration..."
 if [[ "$REGISTER_CODEX" == true ]]; then
   # Desktop clients need absolute paths because they may not inherit the shell's PATH.
   codex mcp add zura-premiere-mcp -- "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT"
@@ -75,6 +96,8 @@ else
 fi
 
 printf '%s\n' "$PROJECT_DIR" > "$INSTALL_DIR/source-root.txt"
+node -e 'const fs=require("node:fs"); fs.writeFileSync(process.argv[1], JSON.stringify({node:process.argv[2],entrypoint:process.argv[3],sourceRoot:process.argv[4]},null,2)+"\n",{mode:0o600});' "$INSTALL_DIR/runtime.json" "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT" "$PROJECT_DIR"
+echo "Setup completed in $SECONDS seconds."
 echo "Zura Premiere MCP and the Premiere panel are installed."
 echo "Restart Premiere Pro if it was already open, then choose Window > Extensions > Zura Premiere MCP."
 if [[ "$REGISTER_CODEX" == true ]]; then
