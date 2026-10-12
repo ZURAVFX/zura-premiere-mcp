@@ -100,6 +100,12 @@ if ($nodeVersion -lt [Version]"20.19.0") {
   if ($nodeVersion -lt [Version]"20.19.0") { throw "Node.js $nodeVersionText is still too old; install Node.js 20.19 or newer." }
 }
 
+# npm.cmd finds node.exe beside itself, but npm lifecycle scripts resolve `node`
+# through PATH. Put the verified Node directory first so a long inherited PATH
+# cannot hide it from the child cmd.exe process.
+$nodeDirectory = Split-Path -Parent $node.Source
+$env:PATH = $nodeDirectory + [System.IO.Path]::PathSeparator + $env:PATH
+
 $npmGlobalBin = if ($env:APPDATA) { Join-Path $env:APPDATA "npm" } else { $null }
 if ($npmGlobalBin) {
   $currentPathEntries = $env:PATH -split [System.IO.Path]::PathSeparator
