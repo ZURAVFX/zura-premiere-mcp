@@ -75,4 +75,20 @@ describe("detect_source_scene_changes boundary", () => {
     await expect(tool.handler({ media_path: mediaPath }))
       .resolves.toMatchObject({ success: false, error: expect.stringContaining("bad video stream") });
   });
+
+  it("decodes only the selected source range and restores source-relative timestamps", async () => {
+    const directory = makeTempDir("premiere-scene-bounded-");
+    const mediaPath = join(directory, "source.mp4");
+    writeFileSync(mediaPath, "video-fixture");
+    mockedExecFileAsync.mockResolvedValueOnce({ stdout: "n:1 pts:100 pts_time:1.00\nlavfi.scene_score=0.40", stderr: "" });
+    await expect(tool.handler({ media_path: mediaPath, start_seconds: 120, duration_seconds: 30 })).resolves.toMatchObject({ success: true, data: { startSeconds: 120, sampleSeconds: 30, sceneChanges: [{ timeSeconds: 121, score: 0.4 }] } });
+    const args = mockedExecFileAsync.mock.calls[0][1];
+    expect(args.slice(args.indexOf("-ss"), args.indexOf("-ss") + 2)).toEqual(["-ss", "120"]);
+    expect(args.slice(args.indexOf("-t"), args.indexOf("-t") + 2)).toEqual(["-t", "30"]);
+  });
+
+  it("refuses invalid sample bounds before decoding", async () => {
+    for (const bounds of [{ start_seconds: -1 }, { duration_seconds: 601 }, { duration_seconds: 0 }]) await expect(tool.handler({ media_path: "source.mp4", ...bounds })).resolves.toMatchObject({ success: false });
+    expect(mockedExecFileAsync).not.toHaveBeenCalled();
+  });
 });

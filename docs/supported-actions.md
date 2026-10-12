@@ -10,11 +10,11 @@ source catalog may include unreleased actions.
 
 | Surface | Count | Availability |
 | --- | ---: | --- |
-| Registered core actions | 393 | CEP/local server catalog; host and authority checks still apply |
-| Default-profile core actions | 391 | Advertised with `inspect,edit,export,filesystem` |
+| Registered core actions | 395 | CEP/local server catalog; host and authority checks still apply |
+| Default-profile core actions | 393 | Advertised with `inspect,edit,export,filesystem` |
 | Restricted core actions | 2 | Require explicit `unsafe-script` authority |
 | Authenticated UXP additions | 96 | Advertised only while a compatible authenticated UXP panel is connected |
-| Default profile with UXP | 487 | 391 core plus 96 UXP tools |
+| Default profile with UXP | 489 | 393 core plus 96 UXP tools |
 
 ## How to read support
 
@@ -272,6 +272,7 @@ operation” when the tool has no enum-based mode.
 | `ping` | Default profile | Single operation | Health check — verify the CEP plugin is running and connected to Premiere Pro. Call this before other tools to confirm connectivity. |
 | `plan_active_speaker_reframe` | Default profile | `layout`: `active_speaker`, `stacked`, `split_left_right`, `auto` | Plan an active-speaker vertical reframe (Motion Scale/Position keyframes that follow whoever is talking) or a static stacked/split layout from a word timeline and static speaker regions. Returns framings, switches, keyframes, and apply routes. Local-only; never changes Premiere. |
 | `plan_beat_montage` | Default profile | `order`: `as_given`, `priority`, `round_robin` | Plan a beat-synced montage: carve a detect_beats grid into shots every N beats (merging short and splitting long spans), assign clips in order, and emit add_to_timeline_batch chunks, trim ranges, and cut markers. Local-only and deterministic; never changes Premiere. |
+| `plan_centered_shot_framing` | Default profile | Single operation | Plan centered static Motion framing for up to 100 measured shots. Keeps centers at (0.5, 0.5) and flags impossible fits instead of offsetting subjects. Local-only; never changes Premiere or inspects pixels. Verify a rendered pilot before batching. |
 | `plan_chapter_markers` | Default profile | Single operation | Plan YouTube-style chapters from a word-timed transcript using local TextTiling-lite topic-shift detection, titling each chapter from its distinctive tokens. Returns chapters, a youtube_timestamps block and add_marker-ready Chapter markers. Local-only plan; never changes Premiere. |
 | `plan_client_notes_checklist` | Default profile | `timecode_style`: `auto`, `clock`, `frames`; `marker_color_mode`: `priority`, `category`, `fixed` | Turn pasted client or reviewer feedback into a prioritized checklist: finds timecodes and ranges, classifies each note (audio, color, graphics, text, timing, cut, legal, delivery), infers must/should/nice priority, separates approvals and questions, and emits an add_markers_batch payload. Local-only and deterministic; never changes Premiere. |
 | `plan_cross_app_workflow` | Default profile | `workflow`: `ae_mogrt_to_premiere`, `ae_render_to_premiere` | Plan an After Effects MOGRT or rendered-file handoff to Premiere using existing tools. Returns ordered dependencies, separate approvals, required evidence, and manual render stops. Local-only planning; never executes steps, issues approval tokens, or claims host readiness. |
@@ -394,6 +395,7 @@ operation” when the tool has no enum-based mode.
 | `set_sequence_settings` | Default profile | Single operation | Modify and read back sequence frame-size settings. |
 | `set_source_in_out` | Default profile | Single operation | Set in and/or out points on the clip currently open in the Source Monitor. |
 | `set_start_time` | Default profile | Single operation | Set the start time (timecode offset) for a project item |
+| `set_static_clip_framing_batch` | Default profile | Single operation | Apply static uniform Motion Scale and Position to up to 50 clips in the active sequence in one CEP command. Preflights every target, refuses Auto Reframe and existing Motion animation, converts pixel Position into host units, and verifies every write. Failure may leave a verified prefix applied; inspect the receipt before retrying. No visual verification is implied. |
 | `set_target_track` | Default profile | `track_type`: `video`, `audio` | Target or untarget one video or audio track for source-patched insert/overwrite edits. Premiere allows several tracks of a type to be targeted at once, so by default (exclusive=true) targeting a track also untargets every other track of the same type. Reads back every track of that type and reports verified only when the readback matches the requested state; otherwise committed_unverified or an error. |
 | `set_time_interpolation` | Default profile | Single operation | Request time interpolation for a clip (Frame Sampling, Frame Blending, Optical Flow) through QE DOM. Premiere exposes no interpolation readback, so the result is committed_unverified and must be checked in Effect Controls. |
 | `set_transcode_on_ingest` | Default profile | Single operation | Request enabling or disabling project transcoding on ingest. Premiere exposes no getter for independent verification, so dispatch is reported as requested_unverified. |

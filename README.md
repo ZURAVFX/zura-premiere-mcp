@@ -48,6 +48,16 @@ For another MCP client, run `bash INSTALL-ZURA-PREMIERE-MCP.command --skip-codex
 
 The server does not upload footage or operate a hosted Premiere session. A tool being available does not establish that the current Premiere version supports it; see [supported actions](docs/supported-actions.md) and [host validation limits](docs/editorial-workflow-host-validation.md).
 
+## Local Reel Workflow
+
+For centered local reels, use `PREMIERE_MCP_TOOL_PACKS=reels` to advertise a compact editing/export catalog. Measure source-shot subject regions, plan static crops with `plan_centered_shot_framing`, verify a rendered pilot, then apply up to 50 clips per active sequence with `set_static_clip_framing_batch`. The batch preflights all targets, refuses animated Motion and Auto Reframe, verifies host units and values, and reports an applied prefix if a later write fails. Rendered composition still needs inspection. Detect cuts only within shortlisted ranges using the optional start/duration arguments of `detect_source_scene_changes`.
+
+For OA Caption Studio captions, resolve the exact live preset and full normalized settings once with `node scripts/caption-studio-presets.mjs --preset "V4V sub" --output <new work selection JSON>`. V4V aliases resolve only when one live V4V entry exists. Names with spaces are supported. Verify each editable caption project offline with `--selection <work selection JSON> --verify-project <project JSON>`; a wrong preset or changed settings must fail before rendering. This helper does not supply or approximate a caption renderer, execute downloaded JavaScript, or upload media.
+
+The reel workflow records a 30-minute deadline, reuses transcripts and shot geometry, and limits recovery to one inspection plus one justified retry. A cold model download, unavailable renderer or large export volume can exceed that target; report it early and deliver only verified results. No end-to-end 30-minute host benchmark is claimed.
+
+Windows setup refreshes PATH, checks the Node version and reports its stages. Successful builds are reused only while the source, dependency lock, Node version and built entrypoints match. The optional source-bundle `-SourceRevision <full Git SHA>` argument emits a SHA-256 manifest for integrations to verify before extracting.
+
 ## Source setup
 
 After cloning or downloading this repository and installing Node.js 20.19 or newer, run this same command in PowerShell on Windows or Terminal on macOS:
