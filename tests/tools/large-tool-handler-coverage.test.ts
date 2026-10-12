@@ -120,7 +120,7 @@ const modules: Array<[string, () => Record<string, Tool>, Set<string>?]> = [
   ["recovery", () => getRecoveryTools(bridgeOptions) as Record<string, Tool>, new Set(["get_bridge_telemetry"])],
   ["scripting", () => getScriptingTools(bridgeOptions) as Record<string, Tool>],
   ["selection", () => getSelectionTools(bridgeOptions) as Record<string, Tool>],
-  ["sequence", () => getSequenceTools(bridgeOptions) as Record<string, Tool>],
+  ["sequence", () => getSequenceTools(bridgeOptions) as Record<string, Tool>, new Set(["get_sequence_presets"])],
   ["source-monitor", () => getSourceMonitorTools(bridgeOptions) as Record<string, Tool>],
   ["text", () => getTextTools(bridgeOptions) as Record<string, Tool>],
   ["timeline", () => getTimelineTools(bridgeOptions) as Record<string, Tool>],

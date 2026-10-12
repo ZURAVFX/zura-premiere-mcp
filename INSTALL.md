@@ -24,7 +24,7 @@ This builds and installs the server for the current user, copies the Premiere CE
 
 Use `--skip-codex` for another client, or `--plugin-managed` when an integration owns registration. Both leave Codex configuration unchanged and print an absolute-path configuration. Run the installed entrypoint with `--print-client-config <claude|cursor|vscode|codex>` for your client. The terminal commands continue to work when the repository or user name contains spaces.
 
-macOS setup discovers Intel and Apple Silicon Homebrew paths, installs under the current user's `~/Library/Application Support/Adobe/ZuraPremiereMCP` without sudo, and records absolute Node/server paths in `runtime.json` for plugin integrations. It reuses dependencies and successful builds only when their content fingerprints match, just like Windows. Desktop plugins should consume that runtime record rather than relying on a Terminal-only PATH. Node.js and Adobe Premiere Pro must be available; the OA-Motion plugin has its own prerequisite bootstrap.
+macOS setup discovers Intel and Apple Silicon Homebrew paths, installs under the current user's `~/Library/Application Support/Adobe/ZuraPremiereMCP` without sudo, and records absolute Node/server paths in `runtime.json` for plugin integrations. It reuses dependencies and successful builds only when their content fingerprints match, just like Windows. Desktop plugins should consume that runtime record rather than relying on a Terminal-only PATH. Node.js and Adobe Premiere Pro must be available; optional workflow plugins manage their own prerequisites.
 
 Installation diagnostics verify local files and CEP settings. A running Premiere panel and a successful connection check are still required before editing.
 

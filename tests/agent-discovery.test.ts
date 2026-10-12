@@ -72,6 +72,43 @@ describe("bounded agent tool discovery", () => {
 });
 
 describe("agent guidance over MCP", () => {
+  it.each([
+    { profile: "inspect", canEdit: false },
+    { profile: "inspect,edit", canEdit: true },
+  ])("discovers reel caption placement and frame-rate controls under $profile authority", async ({ profile, canEdit }) => {
+    vi.stubEnv("PREMIERE_MCP_CAPABILITIES", profile);
+    vi.stubEnv("PREMIERE_MCP_TELEMETRY", "off");
+    const server = createServer({}, { toolPacks: "reels" });
+    const client = new Client({ name: "reels-frame-rate-discovery-test", version: "1.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+      const listed = new Set((await client.listTools()).tools.map((tool) => tool.name));
+      expect(listed.has("get_footage_interpretation")).toBe(true);
+      expect(listed.has("set_override_frame_rate")).toBe(canEdit);
+      expect(listed.has("overwrite_clip")).toBe(canEdit);
+
+      for (const [name, authority, registered] of [
+        ["get_footage_interpretation", "inspect", true],
+        ["set_override_frame_rate", "edit", canEdit],
+        ["overwrite_clip", "edit", canEdit],
+      ] as const) {
+        const result = await client.callTool({ name: "get_capabilities", arguments: {
+          tool_query: name,
+          tool_names: [name],
+          available_only: false,
+        } });
+        expect((result.structuredContent as any).data.tools.tools).toEqual([
+          expect.objectContaining({
+            name,
+            registered,
+            authority: { required: authority, enabled: registered },
+          }),
+        ]);
+      }
+    } finally { await client.close(); await server.close(); }
+  });
+
   it("advertises a complete compact reels route over MCP without forbidden fallbacks", async () => {
     vi.stubEnv("PREMIERE_MCP_CAPABILITIES", "inspect,edit,export,filesystem");
     vi.stubEnv("PREMIERE_MCP_TELEMETRY", "off");
@@ -83,7 +120,7 @@ describe("agent guidance over MCP", () => {
       const tools = (await client.listTools()).tools;
       const names = new Set(tools.map((tool) => tool.name));
       expect(tools.length).toBeLessThanOrEqual(60);
-      for (const name of ["import_media", "create_subclip", "create_sequence_from_clips", "set_sequence_settings", "plan_centered_shot_framing", "set_static_clip_framing_batch", "import_image_sequence", "export_sequence", "verify_delivery_file", "start_batch_encode"]) expect(names.has(name), name).toBe(true);
+      for (const name of ["import_media", "create_subclip", "create_sequence_from_clips", "get_sequence_presets", "set_sequence_settings", "plan_centered_shot_framing", "set_static_clip_framing_batch", "import_image_sequence", "get_footage_interpretation", "set_override_frame_rate", "overwrite_clip", "remove_from_timeline", "get_encoder_presets", "export_sequence", "verify_delivery_file", "start_batch_encode"]) expect(names.has(name), name).toBe(true);
       for (const name of ["auto_reframe_sequence", "consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(names.has(name), name).toBe(false);
       expect(client.getInstructions()).toContain("30-minute deadline");
       expect(client.getInstructions()).toContain("plan_centered_shot_framing -> set_static_clip_framing_batch -> capture_frame");

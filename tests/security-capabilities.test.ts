@@ -72,6 +72,15 @@ describe("capability profiles", () => {
     expect(handler).not.toHaveBeenCalled();
     expect(isToolPermitted("get_export_file_extension", resolveCapabilities("inspect"))).toBe(false);
   });
+  it("requires inspect and filesystem authority to discover local Premiere presets", async () => {
+    for (const name of ["get_encoder_presets", "get_sequence_presets"]) {
+      expect(capabilitiesForToolInvocation(name, {})).toEqual(["inspect", "filesystem"]);
+      const handler = vi.fn(async () => "ok");
+      await expect(guardToolHandler(name, handler, resolveCapabilities("inspect"), () => "preset-op")({}))
+        .rejects.toMatchObject({ code: "CAPABILITY_DENIED", capability: "filesystem" });
+      expect(handler).not.toHaveBeenCalled();
+    }
+  });
   it("requires inspect, edit and filesystem authority for probed adjacent edits", async () => {
     for (const name of ["roll_edit", "slide_edit"]) {
       expect(capabilitiesForToolInvocation(name, { node_id: "c1", offset_seconds: 1 })).toEqual(["inspect", "edit", "filesystem"]);

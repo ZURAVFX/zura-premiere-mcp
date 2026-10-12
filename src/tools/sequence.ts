@@ -1,7 +1,7 @@
 import { buildToolScript, escapeForExtendScript } from "../bridge/script-builder.js";
 import { sendCommand, BridgeOptions } from "../bridge/file-bridge.js";
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { basename, dirname, extname, join, resolve, win32 } from "node:path";
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { basename, dirname, extname, join, relative, resolve, win32 } from "node:path";
 import { describePresetFolder } from "./encoder-formats.js";
 
 /**
@@ -14,6 +14,138 @@ import { describePresetFolder } from "./encoder-formats.js";
  * no-preset path must still resolve to a concrete preset file.
  */
 let cachedDefaultPreset: string | null | undefined;
+
+const PRESET_TICKS_PER_SECOND = 254016000000;
+const PRESET_SCAN_MAX_FILES = 2048;
+const PRESET_SCAN_MAX_DIRECTORIES = 512;
+const PRESET_SCAN_MAX_ENTRIES = 4096;
+const PRESET_SCAN_MAX_DEPTH = 5;
+const PRESET_METADATA_MAX_BYTES = 256 * 1024;
+
+type SequencePreset = {
+  name: string;
+  path: string;
+  category: string;
+  fps: number | null;
+  width: number | null;
+  height: number | null;
+  source: "installation" | "override";
+};
+
+function installationPresetRoots(): string[] {
+  const base = process.platform === "darwin" ? "/Applications" : "C:\\Program Files\\Adobe";
+  let versions: string[];
+  try {
+    versions = readdirSync(base).filter((name) => /^Adobe Premiere Pro(?:\s|$)/i.test(name));
+  } catch {
+    return [];
+  }
+  // Stable releases first, newest year first. Beta remains discoverable, after stable.
+  versions.sort((a, b) => {
+    const aBeta = /beta/i.test(a) ? 1 : 0;
+    const bBeta = /beta/i.test(b) ? 1 : 0;
+    if (aBeta !== bBeta) return aBeta - bBeta;
+    return (Number(b.match(/20\d{2}/)?.[0]) || 0) - (Number(a.match(/20\d{2}/)?.[0]) || 0) || a.localeCompare(b);
+  });
+  const roots: string[] = [];
+  for (const version of versions.slice(0, 16)) {
+    const appRoot = join(base, version);
+    if (process.platform !== "darwin") {
+      roots.push(join(appRoot, "Settings", "SequencePresets"));
+      continue;
+    }
+    try {
+      for (const app of readdirSync(appRoot).filter((name) => name.endsWith(".app")).slice(0, 8)) {
+        roots.push(join(appRoot, app, "Contents", "Settings", "SequencePresets"));
+      }
+    } catch {
+      // Skip an installation that cannot be read.
+    }
+  }
+  return roots;
+}
+
+function presetMetadata(path: string): Pick<SequencePreset, "fps" | "width" | "height"> {
+  let content: string;
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.size > PRESET_METADATA_MAX_BYTES) return { fps: null, width: null, height: null };
+    content = readFileSync(path, "utf8");
+  } catch {
+    return { fps: null, width: null, height: null };
+  }
+  const ticks = Number(content.match(/<VideoFrameRate>(\d+)<\/VideoFrameRate>/)?.[1]);
+  const size = content.match(/<VideoFrameSize>([\d,\s]+)<\/VideoFrameSize>/)?.[1]
+    .split(",").map((value) => Number(value.trim()));
+  const width = size && size.length >= 2 ? size[size.length - 2] : null;
+  const height = size && size.length >= 2 ? size[size.length - 1] : null;
+  return {
+    fps: Number.isFinite(ticks) && ticks > 0 ? Math.round(PRESET_TICKS_PER_SECOND / ticks * 100000) / 100000 : null,
+    width: width !== null && Number.isSafeInteger(width) && width > 0 ? width : null,
+    height: height !== null && Number.isSafeInteger(height) && height > 0 ? height : null,
+  };
+}
+
+function discoverSequencePresets(): { presets: SequencePreset[]; truncated: boolean; filesScanned: number; directoriesScanned: number } {
+  const presets: SequencePreset[] = [];
+  const seen = new Set<string>();
+  let filesScanned = 0;
+  let directoriesScanned = 0;
+  let entriesScanned = 0;
+  let truncated = false;
+  const addPreset = (path: string, root: string, source: SequencePreset["source"]) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    filesScanned++;
+    presets.push({ name: basename(path, ".sqpreset"), path, category: source === "override" ? "Override" : dirname(relative(root, path)), source, ...presetMetadata(path) });
+  };
+  const override = process.env.PREMIERE_DEFAULT_SEQUENCE_PRESET;
+  if (override && extname(override).toLowerCase() === ".sqpreset") {
+    try {
+      if (lstatSync(override).isFile()) addPreset(override, dirname(override), "override");
+    } catch {
+      // An invalid override cannot prevent installation discovery.
+    }
+  }
+  const walk = (path: string, root: string, depth: number) => {
+    if (directoriesScanned >= PRESET_SCAN_MAX_DIRECTORIES || entriesScanned >= PRESET_SCAN_MAX_ENTRIES || filesScanned >= PRESET_SCAN_MAX_FILES) {
+      truncated = true;
+      return;
+    }
+    let entries: string[];
+    try {
+      if (!lstatSync(path).isDirectory()) return;
+      directoriesScanned++;
+      entries = readdirSync(path).sort((a, b) => a.localeCompare(b));
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      if (entriesScanned++ >= PRESET_SCAN_MAX_ENTRIES || filesScanned >= PRESET_SCAN_MAX_FILES) {
+        truncated = true;
+        break;
+      }
+      const child = join(path, name);
+      try {
+        const stat = lstatSync(child);
+        if (stat.isDirectory()) {
+          if (depth < PRESET_SCAN_MAX_DEPTH) walk(child, root, depth + 1);
+          else truncated = true;
+        } else if (stat.isFile() && extname(name).toLowerCase() === ".sqpreset") {
+          addPreset(child, root, "installation");
+        }
+      } catch {
+        // Unreadable or removed entries are omitted.
+      }
+      if (truncated) break;
+    }
+  };
+  for (const root of installationPresetRoots()) {
+    walk(root, root, 0);
+    if (truncated) break;
+  }
+  return { presets, truncated, filesScanned, directoriesScanned };
+}
 export function findDefaultSequencePreset(): string | null {
   if (cachedDefaultPreset !== undefined) return cachedDefaultPreset;
 
@@ -69,6 +201,60 @@ export function findDefaultSequencePreset(): string | null {
 
 export function getSequenceTools(bridgeOptions: BridgeOptions) {
   return {
+    get_sequence_presets: {
+      description:
+        "Read-only list of local Premiere .sqpreset files, including frame rate and dimensions parsed from each preset where available. Use a returned path with create_sequence or create_sequence_from_preset when an exact sequence frame rate is needed. This does not inspect the active Premiere project and does not change it.",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          fps: {
+            type: "number",
+            description: "Optional frame-rate filter, e.g. 24, 25, or 23.976. Matches within 0.02 fps; presets with unreadable frame rates are omitted when filtering.",
+          },
+          query: {
+            type: "string",
+            description: "Optional case-insensitive substring in preset name or category, such as 1080p or vertical.",
+          },
+          limit: {
+            type: "integer",
+            description: "Maximum presets to return (1-100; default 50).",
+          },
+          offset: {
+            type: "integer",
+            description: "Number of matching presets to skip (0-10000; default 0).",
+          },
+        },
+      },
+      handler: async (args: { fps?: number; query?: string; limit?: number; offset?: number }) => {
+        const limit = args.limit ?? 50;
+        const offset = args.offset ?? 0;
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) return { success: false as const, error: "limit must be an integer from 1 to 100." };
+        if (!Number.isInteger(offset) || offset < 0 || offset > 10000) return { success: false as const, error: "offset must be an integer from 0 to 10000." };
+        if (args.fps !== undefined && (!Number.isFinite(args.fps) || args.fps <= 0 || args.fps > 240)) {
+          return { success: false as const, error: "fps must be a finite number greater than 0 and at most 240." };
+        }
+        if (args.query !== undefined && (typeof args.query !== "string" || args.query.length > 100)) {
+          return { success: false as const, error: "query must be a string of at most 100 characters." };
+        }
+        const discovery = discoverSequencePresets();
+        const query = args.query?.trim().toLowerCase();
+        const matches = discovery.presets.filter((preset) =>
+          (args.fps === undefined || (preset.fps !== null && Math.abs(preset.fps - args.fps) <= 0.02)) &&
+          (!query || `${preset.name} ${preset.category}`.toLowerCase().includes(query)));
+        return {
+          success: true as const,
+          data: {
+            count: Math.min(limit, Math.max(0, matches.length - offset)),
+            total: matches.length,
+            offset,
+            presets: matches.slice(offset, offset + limit),
+            scan: { filesScanned: discovery.filesScanned, directoriesScanned: discovery.directoriesScanned, truncated: discovery.truncated },
+            note: discovery.truncated ? "Preset discovery reached a safety cap; later installations may not be listed." : undefined,
+          },
+        };
+      },
+    },
+
     create_sequence: {
       description: "Create a new sequence in the project",
       parameters: {
@@ -96,7 +282,7 @@ export function getSequenceTools(bridgeOptions: BridgeOptions) {
           return {
             success: false,
             error:
-              "No sequence preset found. Pass preset_path (an .sqpreset file) or set PREMIERE_DEFAULT_SEQUENCE_PRESET — " +
+              "No sequence preset found. Call get_sequence_presets, pass preset_path (an .sqpreset file), or set PREMIERE_DEFAULT_SEQUENCE_PRESET — " +
               "creating a sequence without a preset opens a modal dialog in Premiere 26+, which would freeze scripting.",
           };
         }

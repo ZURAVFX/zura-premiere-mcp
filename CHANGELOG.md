@@ -9,9 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Added a local installer and source-bundle builder for the Zura Premiere MCP server and Premiere connector.
+- `get_sequence_presets` discovers installed Premiere sequence presets with bounded, paged frame-rate and dimension readback. The focused `reels` pack also exposes preset discovery for sequence creation and export recovery, plus verified timeline removal.
 
 ### Fixed
 
+- `import_image_sequence` accepts an optional interpreted frame rate and verifies both the imported project-item ID and stored frame rate before reporting success. A same-path retry reuses the item; uncertain imports return an explicit receipt instead of inviting a duplicate. The focused `reels` pack now exposes footage interpretation and caption replacement, avoiding a UI-only detour for caption PNG timing.
 - `consolidate_and_transfer` now requires `confirm_media_copy: true` and an absolute destination, verifies Premiere's process status and output parent, and reports complete file/byte totals even when the returned file-name list is truncated.
 
 - Windows uses a private per-user Adobe application-data folder for the default Premiere bridge instead of the shared Temp tree. The CEP panel migrates its previously saved legacy default while preserving explicit custom paths.

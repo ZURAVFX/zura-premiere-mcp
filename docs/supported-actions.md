@@ -10,11 +10,11 @@ source catalog may include unreleased actions.
 
 | Surface | Count | Availability |
 | --- | ---: | --- |
-| Registered core actions | 395 | CEP/local server catalog; host and authority checks still apply |
-| Default-profile core actions | 393 | Advertised with `inspect,edit,export,filesystem` |
+| Registered core actions | 396 | CEP/local server catalog; host and authority checks still apply |
+| Default-profile core actions | 394 | Advertised with `inspect,edit,export,filesystem` |
 | Restricted core actions | 2 | Require explicit `unsafe-script` authority |
 | Authenticated UXP additions | 96 | Advertised only while a compatible authenticated UXP panel is connected |
-| Default profile with UXP | 489 | 393 core plus 96 UXP tools |
+| Default profile with UXP | 490 | 394 core plus 96 UXP tools |
 
 ## How to read support
 
@@ -192,6 +192,7 @@ operation” when the tool has no enum-based mode.
 | `get_sequence_count` | Default profile | Single operation | Get the total number of sequences in the project. |
 | `get_sequence_in_out_points` | Default profile | Single operation | Get the current sequence in and out points |
 | `get_sequence_markers_by_type` | Default profile | `marker_type`: `Comment`, `Chapter`, `Segmentation`, `WebLink`, `FlashCuePoint` | Get all markers of a specific type (comment, chapter, web link, etc.) from a sequence. |
+| `get_sequence_presets` | Default profile | Single operation | Read-only list of local Premiere .sqpreset files, including frame rate and dimensions parsed from each preset where available. Use a returned path with create_sequence or create_sequence_from_preset when an exact sequence frame rate is needed. This does not inspect the active Premiere project and does not change it. |
 | `get_sequence_settings` | Default profile | Single operation | Get the settings (resolution, frame rate, etc.) of a sequence |
 | `get_sequence_structure` | Default profile | `track_type`: `video`, `audio`, `both` | Get a bounded structural page of the active sequence (50 clips by default; follow pagination.nextOffset): all track counts, paged clips with positions, gaps, and clip metadata. Essential for understanding timeline state before making edits. |
 | `get_source_monitor_info` | Default profile | Single operation | Get information about the clip currently loaded in the Source Monitor. |
@@ -213,7 +214,7 @@ operation” when the tool has no enum-based mode.
 | `import_edl` | Default profile | Single operation | Unavailable by design: CMX 3600 EDL import opens Premiere UI that can block the CEP bridge. No import is attempted; convert the EDL to FCP7 XML and use import_fcp_xml for unattended interchange. |
 | `import_fcp_xml` | Default profile | `mode`: `new_project`, `into_open_project` | Import a Final Cut Pro XML file. Default mode new_project opens it as a new Premiere project: app.openFCPXML(path, projPath) requires a destination project path, and verified is true only when that destination exists as a file and Premiere has that exact path open. Mode into_open_project instead imports the XML into the currently open project with project.importFiles and succeeds only when the sequence count grew; the XML also brings its own clips, which can duplicate existing items. |
 | `import_folder` | Default profile | Single operation | Import the media files directly inside a folder and read the destination tree back. Reports observed new media items; unreadable or unmatched imports are committed_unverified. |
-| `import_image_sequence` | Default profile | Single operation | Import a numbered image sequence as a single video clip. |
+| `import_image_sequence` | Default profile | Single operation | Import a numbered image sequence as one project item, optionally interpreting it at a specified frame rate (for example, Caption Studio PNG overlays). Resolves the new item by node ID and reads the frame rate back. Reuses an unambiguous existing item from the same first frame on retry; a post-import uncertainty returns a committed_unverified receipt, so inspect before importing again. |
 | `import_media` | Default profile | Single operation | Import media files into the project and confirm a new project item for each file |
 | `import_mogrt` | Default profile | Single operation | Import a Motion Graphics Template (.mogrt) file and add it to the timeline. Pass text_values (for example { "Headline": "..." }) to write each text control explicitly after insertion and verify it by readback, so a template default or stale value is never left in place silently. |
 | `import_mogrt_from_library` | Default profile | Single operation | Request importing a MOGRT from a named Adobe Creative Cloud Library. Library contents cannot be enumerated through CEP; host acceptance is committed_unverified, and rendered appearance must be checked in Premiere. |

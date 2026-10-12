@@ -158,6 +158,8 @@ const TOOL_CAPABILITY_REQUIREMENTS: Readonly<Record<string, readonly Capability[
   // Preset preflight reads local files; AME queue handoff can start exports.
   create_sequence: ["edit", "filesystem"],
   create_sequence_from_preset: ["edit", "filesystem"],
+  get_encoder_presets: ["inspect", "filesystem"],
+  get_sequence_presets: ["inspect", "filesystem"],
   add_to_render_queue: ["export", "filesystem"],
   get_export_file_extension: ["inspect", "filesystem"],
   roll_edit: ["inspect", "edit", "filesystem"],

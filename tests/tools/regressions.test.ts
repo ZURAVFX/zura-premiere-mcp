@@ -1330,7 +1330,7 @@ describe("issue #237 — reported mutations must be observable or fail", () => {
     const offline = await scriptFor(media.set_offline, { item_id: "item-1", offline: false });
 
     expect(image).toContain("sourceFile.exists");
-    expect(image).toContain("Premiere accepted the image-sequence import but no project item was added");
+    expect(image).toContain("Image-sequence import was attempted but its new project item could not be verified uniquely");
     expect(points).toContain("item.getInPoint");
     expect(points).toContain("Premiere did not apply the requested project-item in point");
     expect(enabled).toContain("track.clips[c].disabled = disabled");

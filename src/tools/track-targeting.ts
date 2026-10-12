@@ -836,7 +836,7 @@ export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
     },
 
     import_image_sequence: {
-      description: "Import a numbered image sequence as a single video clip.",
+      description: "Import a numbered image sequence as one project item, optionally interpreting it at a specified frame rate (for example, Caption Studio PNG overlays). Resolves the new item by node ID and reads the frame rate back. Reuses an unambiguous existing item from the same first frame on retry; a post-import uncertainty returns a committed_unverified receipt, so inspect before importing again.",
       parameters: {
         type: "object" as const,
         properties: {
@@ -850,13 +850,21 @@ export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
             description:
               "Target bin name to import into (optional, imports to root if omitted)",
           },
+          frame_rate: {
+            type: "number",
+            description: "Optional positive interpreted frame rate for the imported image sequence (for example, 24 for Caption Studio PNG overlays). Set and read back in the same command.",
+          },
         },
         required: ["first_file_path"],
       },
       handler: async (args: {
         first_file_path: string;
         target_bin?: string;
+        frame_rate?: number;
       }) => {
+        if (typeof args.first_file_path !== "string" || !args.first_file_path.trim()) return { success: false, error: "first_file_path must be non-empty." };
+        if (args.target_bin !== undefined && (typeof args.target_bin !== "string" || !args.target_bin.trim())) return { success: false, error: "target_bin must be non-empty when provided." };
+        if (args.frame_rate !== undefined && (typeof args.frame_rate !== "number" || !Number.isFinite(args.frame_rate) || args.frame_rate <= 0)) return { success: false, error: "frame_rate must be a positive number." };
         const script = buildToolScript(`
           var sourceFile = new File("${escapeForExtendScript(args.first_file_path)}");
           if (!sourceFile.exists) return __error("The first image file does not exist: " + sourceFile.fsName);
@@ -865,35 +873,98 @@ export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
             args.target_bin
               ? `
           var found = __findProjectItem("${escapeForExtendScript(args.target_bin)}");
-          if (found && found.type === 2) targetBin = found;
+          if (!found || found.type !== 2) return __error("Target bin not found: ${escapeForExtendScript(args.target_bin)}. Nothing was imported.");
+          targetBin = found;
           `
               : ""
           }
-
-          var beforeCount = targetBin.children.numItems;
-          var imported = app.project.importFiles([sourceFile.fsName], true, targetBin, true);
-          if (!imported) return __error("Premiere did not import the numbered image sequence.");
+          function canonicalPath(path) {
+            var normalized = String(new File(String(path)).fsName);
+            try { if (String($.os).toLowerCase().indexOf("windows") !== -1) normalized = normalized.toLowerCase(); } catch (eOs) {}
+            return normalized;
+          }
+          function itemPath(item) {
+            try { var path = item.getMediaPath ? item.getMediaPath() : null; return path ? canonicalPath(path) : null; } catch (ePath) { return null; }
+          }
+          var wantedPath = canonicalPath(sourceFile.fsName);
+          var beforeCount = __childCount(targetBin);
+          var beforeIds = {};
+          var existing = [];
+          for (var bi = 0; bi < beforeCount; bi++) {
+            var prior = __childAt(targetBin, bi);
+            if (!prior) continue;
+            var priorId = __nodeIdOf(prior);
+            if (priorId) beforeIds["$" + priorId] = true;
+            if (itemPath(prior) === wantedPath) existing.push(prior);
+          }
+          if (existing.length > 1) return __error("Multiple project items already use this first image path; pass a unique item ID to set_override_frame_rate instead of importing again.", { file: sourceFile.fsName, existingNodeIds: [__nodeIdOf(existing[0]), __nodeIdOf(existing[1])], importAttempted: false, outcome: "failed", verified: false });
           var importedItem = null;
-          for (var i = 0; i < targetBin.children.numItems; i++) {
-            var candidate = targetBin.children[i];
-            try {
-              if (candidate.getMediaPath && String(candidate.getMediaPath()) === String(sourceFile.fsName)) {
-                importedItem = candidate;
-                break;
+          var reused = false;
+          if (existing.length === 1) {
+            importedItem = existing[0];
+            reused = true;
+          } else {
+            var importResult = null;
+            var importError = null;
+            try { importResult = app.project.importFiles([sourceFile.fsName], true, targetBin, true); }
+            catch (eImport) { importError = String(eImport); }
+            var afterCount = __childCount(targetBin);
+            var newItems = [];
+            var matchingItems = [];
+            var candidateIds = [];
+            for (var ai = 0; ai < afterCount; ai++) {
+              var candidate = __childAt(targetBin, ai);
+              if (!candidate) continue;
+              var candidateId = __nodeIdOf(candidate);
+              if (candidateId && !beforeIds["$" + candidateId]) {
+                newItems.push(candidate);
+                if (candidateIds.length < 25) candidateIds.push(candidateId);
+                if (itemPath(candidate) === wantedPath) matchingItems.push(candidate);
               }
-            } catch (e) {}
+            }
+            if (importResult && matchingItems.length === 1 && __nodeIdOf(matchingItems[0])) {
+              importedItem = matchingItems[0];
+            } else {
+              return __error("Image-sequence import was attempted but its new project item could not be verified uniquely. Inspect the target bin before retrying the import.", {
+                file: sourceFile.fsName, targetBin: String(targetBin.name || ""), targetBinNodeId: __nodeIdOf(targetBin),
+                importAttempted: true, importResult: importResult, importError: importError,
+                beforeCount: beforeCount, afterCount: afterCount, newItemCount: newItems.length,
+                matchingItemCount: matchingItems.length, candidateNodeIds: candidateIds,
+                imported: null, asImageSequence: true, projectItem: null,
+                outcome: "committed_unverified", verified: false, retryImport: false
+              });
+            }
           }
-          if (!importedItem && targetBin.children.numItems <= beforeCount) {
-            return __error("Premiere accepted the image-sequence import but no project item was added.");
+          var itemId = __nodeIdOf(importedItem);
+          if (!itemId) return __error("Image-sequence item was found but has no readable node ID. Inspect the target bin before retrying the import.", { file: sourceFile.fsName, targetBin: String(targetBin.name || ""), importAttempted: !reused, imported: null, outcome: "committed_unverified", verified: false, retryImport: false });
+          var itemReceipt = { name: String(importedItem.name || ""), nodeId: itemId };
+          ${args.frame_rate !== undefined ? `
+          var rateError = null;
+          var beforeRate = null;
+          try {
+            var beforeInterpretation = importedItem.getFootageInterpretation();
+            if (beforeInterpretation && typeof beforeInterpretation.frameRate === "number" && isFinite(beforeInterpretation.frameRate)) beforeRate = beforeInterpretation.frameRate;
+          } catch (eBeforeRate) {}
+          if (beforeRate === null || Math.abs(beforeRate - ${args.frame_rate}) >= 0.001) {
+            try { importedItem.setOverrideFrameRate(${args.frame_rate}); } catch (eRate) { rateError = String(eRate); }
           }
-
-          return __result({
-            imported: true,
-            file: sourceFile.fsName,
-            asImageSequence: true,
-            verified: true,
-            projectItem: importedItem ? { name: importedItem.name, nodeId: importedItem.nodeId } : null
-          });
+          var observedRate = null;
+          try {
+            var interpretation = importedItem.getFootageInterpretation();
+            if (interpretation && typeof interpretation.frameRate === "number" && isFinite(interpretation.frameRate)) observedRate = interpretation.frameRate;
+          } catch (eRateRead) {}
+          if (observedRate === null || Math.abs(observedRate - ${args.frame_rate}) >= 0.001) {
+            return __error("Image sequence is in the project, but its requested frame rate did not read back. Inspect or use set_override_frame_rate with this node ID; do not import it again.", {
+              file: sourceFile.fsName, projectItem: itemReceipt, importAttempted: !reused,
+              imported: !reused, reused: reused, asImageSequence: true,
+              requestedFrameRate: ${args.frame_rate}, frameRate: observedRate, frameRateError: rateError,
+              outcome: "committed_unverified", verified: false, retryImport: false
+            });
+          }
+          ` : ""}
+          return __result({ imported: !reused, reused: reused, file: sourceFile.fsName,
+            asImageSequence: true, verified: true, outcome: "verified", projectItem: itemReceipt
+            ${args.frame_rate !== undefined ? `, frameRate: observedRate` : ""} });
         `);
         return sendCommand(script, bridgeOptions);
       },
