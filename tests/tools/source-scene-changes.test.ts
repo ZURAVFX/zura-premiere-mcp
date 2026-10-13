@@ -85,6 +85,12 @@ describe("detect_source_scene_changes boundary", () => {
     const args = mockedExecFileAsync.mock.calls[0][1];
     expect(args.slice(args.indexOf("-ss"), args.indexOf("-ss") + 2)).toEqual(["-ss", "120"]);
     expect(args.slice(args.indexOf("-t"), args.indexOf("-t") + 2)).toEqual(["-t", "30"]);
+    expect(args.indexOf("-t")).toBeLessThan(args.indexOf("-i"));
+  });
+
+  it("excludes events at or after the sample end before merging nearby candidates", () => {
+    const output = "pts_time:29.9\nlavfi.scene_score=0.4\npts_time:30\nlavfi.scene_score=0.9\npts_time:44.6\nlavfi.scene_score=0.8";
+    expect(parseSceneChangeOutput(output, 0.25, 30)).toEqual([{timeSeconds:29.9,score:0.4}]);
   });
 
   it("refuses invalid sample bounds before decoding", async () => {

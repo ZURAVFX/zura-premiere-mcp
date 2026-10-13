@@ -1,3 +1,7 @@
+## 1.24.2
+
+- Bound source scene detection to the requested input range and discard out-of-range events before merging nearby cuts. Verified against a real camera cut and regression tests.
+
 ## 1.24.1
 
 - Prefer the running PowerShell host's built-in modules during Windows setup, including launches from PowerShell 7 and Codex.

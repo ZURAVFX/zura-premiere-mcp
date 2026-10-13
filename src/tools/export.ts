@@ -459,7 +459,7 @@ export interface SceneChange {
   score: number;
 }
 
-export function parseSceneChangeOutput(output: string, minimumIntervalSeconds = 0): SceneChange[] {
+export function parseSceneChangeOutput(output: string, minimumIntervalSeconds = 0, durationSeconds = Infinity): SceneChange[] {
   const events: SceneChange[] = [];
   let pendingTime: number | null = null;
   for (const line of output.split(/\r?\n/)) {
@@ -468,6 +468,10 @@ export function parseSceneChangeOutput(output: string, minimumIntervalSeconds = 
     const score = line.match(/lavfi\.scene_score=([\d.]+)/);
     if (score && pendingTime !== null) {
       const event = { timeSeconds: pendingTime, score: Number(score[1]) };
+      pendingTime = null;
+      // Filter before coalescing, so a stronger out-of-range event cannot
+      // replace a legitimate candidate immediately before the sample ends.
+      if (!Number.isFinite(event.timeSeconds) || event.timeSeconds < 0 || event.timeSeconds >= durationSeconds) continue;
       const previous = events.at(-1);
       if (!previous || event.timeSeconds - previous.timeSeconds >= minimumIntervalSeconds) events.push(event);
       else if (event.score > previous.score) events[events.length - 1] = event;
@@ -933,12 +937,13 @@ export function getExportTools(bridgeOptions: BridgeOptions) {
         if (!existsSync(mediaPath) || !statSync(mediaPath).isFile()) return { success: false, error: `Video file not found on disk: ${mediaPath}` };
         try {
           const result = await execFileAsync("ffmpeg", [
-            "-nostdin", "-hide_banner", ...(startSeconds ? ["-ss", String(startSeconds)] : []), "-i", mediaPath,
+            "-nostdin", "-hide_banner", ...(startSeconds ? ["-ss", String(startSeconds)] : []),
             ...(args.duration_seconds !== undefined ? ["-t", String(args.duration_seconds)] : []),
+            "-i", mediaPath,
             "-vf", `select='gt(scene,${threshold})',showinfo,metadata=print`,
             "-an", "-f", "null", "-",
           ], { timeout: VIDEO_QC_TIMEOUT_MS, maxBuffer: 64 * 1024 * 1024 });
-          const all = parseSceneChangeOutput(`${result.stdout}\n${result.stderr}`, minimumInterval).map((event) => ({ ...event, timeSeconds: event.timeSeconds + startSeconds }));
+          const all = parseSceneChangeOutput(`${result.stdout}\n${result.stderr}`, minimumInterval, args.duration_seconds).map((event) => ({ ...event, timeSeconds: event.timeSeconds + startSeconds }));
           const sceneChanges = all.slice(0, maximumEvents);
           return {
             success: true,
