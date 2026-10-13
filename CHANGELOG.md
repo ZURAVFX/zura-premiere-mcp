@@ -1,3 +1,7 @@
+## 1.24.1
+
+- Prefer the running PowerShell host's built-in modules during Windows setup, including launches from PowerShell 7 and Codex.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

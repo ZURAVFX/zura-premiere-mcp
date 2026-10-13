@@ -1,4 +1,6 @@
 $ErrorActionPreference = "Stop"
+# Prefer this host's built-in modules when launched from PowerShell 7 or an IDE.
+$env:PSModulePath = "$PSHOME\Modules;$env:PSModulePath"
 
 $installer = Join-Path $PSScriptRoot "scripts\install-zura-premiere-mcp.ps1"
 if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {

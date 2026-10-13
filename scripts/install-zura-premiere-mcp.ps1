@@ -4,6 +4,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Prefer this host's built-in modules when launched from PowerShell 7 or an IDE.
+$env:PSModulePath = "$PSHOME\Modules;$env:PSModulePath"
 $setupStarted = Get-Date
 $env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User") + ";" + $env:PATH
 Write-Host "[1/5] Checking the local bundled source and prerequisites..."
