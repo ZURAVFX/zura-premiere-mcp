@@ -55,7 +55,7 @@ it("every generated ExtendScript parses as ECMAScript 3", async () => {
     const scripts = [...vi.mocked(sendCommand).mock.calls, ...vi.mocked(sendRawCommand).mock.calls, ...vi.mocked(sendAfterEffectsCommand).mock.calls].map((c) => String(c[0]));
     for (const script of scripts) {
       scanned++;
-      try { acorn.parse(script, { ecmaVersion: 3, allowReturnOutsideFunction: true }); }
+      try { acorn.parse(script, { ecmaVersion: 3, allowReserved: "never", allowReturnOutsideFunction: true }); }
       catch (e: any) {
         const line = script.split("\n")[e.loc.line - 1] ?? "";
         report.push(`${tool.name}: ${e.message} | ${line.trim().slice(0, 150)}`);
@@ -64,7 +64,7 @@ it("every generated ExtendScript parses as ECMAScript 3", async () => {
   }
   await client.close(); await server.close();
   for (const [label, source] of [["Premiere helpers", getHelpersSource()], ["After Effects helpers", getAfterEffectsHelpersSource()]]) {
-    try { acorn.parse(source, { ecmaVersion: 3, allowReturnOutsideFunction: true }); }
+    try { acorn.parse(source, { ecmaVersion: 3, allowReserved: "never", allowReturnOutsideFunction: true }); }
     catch (e: any) { report.push(`${label}: ${e.message}`); }
   }
   expect(scanned).toBeGreaterThan(250);
@@ -79,5 +79,5 @@ it("batch insertion preflight and receipt script parse as ECMAScript 3", async (
     clips: [{ item_id: "source", track_index: 0, start_seconds: 0, audio_track_index: 0 }],
   });
   expect(sendCommand).toHaveBeenCalledOnce();
-  acorn.parse(String(vi.mocked(sendCommand).mock.calls[0][0]), { ecmaVersion: 3, allowReturnOutsideFunction: true });
+  acorn.parse(String(vi.mocked(sendCommand).mock.calls[0][0]), { ecmaVersion: 3, allowReserved: "never", allowReturnOutsideFunction: true });
 });

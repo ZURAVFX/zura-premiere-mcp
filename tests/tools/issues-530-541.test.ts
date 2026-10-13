@@ -56,7 +56,7 @@ describe("issue #530 — Claude Desktop UXP token is optional for CEP-only setup
       required: false,
     });
     expect(claudeDesktopManifest.user_config.premiere_uxp_token.description).toMatch(/CEP/i);
-    expect(claudeDesktopManifest.user_config.premiere_uxp_token.description).toMatch(/UXP Plugins/i);
+    expect(claudeDesktopManifest.user_config.premiere_uxp_token.description).toMatch(/Zura Advanced Bridge UXP panel/i);
   });
 });
 

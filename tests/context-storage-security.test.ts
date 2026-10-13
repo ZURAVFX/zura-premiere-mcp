@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { chmod, link, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectContextRepository, type ProjectContextDocument } from "../src/context/project-context-store.js";
@@ -18,7 +18,7 @@ afterEach(async () => {
   await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
 async function directory() {
-  const result = await mkdtemp(path.join(tmpdir(), "ppmcp-private-context-"));
+  const result = await mkdtemp(path.join(posix ? tmpdir() : homedir(), "ppmcp-private-context-"));
   directories.push(result);
   return posix ? result : path.join(result, "private");
 }

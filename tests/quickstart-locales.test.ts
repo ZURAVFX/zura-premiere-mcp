@@ -16,8 +16,8 @@ describe("quick-start localization foundation", () => {
 
   it("links the README proof path without calling an illustration a live screenshot", () => {
     const readme = readFileSync(join(root, "README.md"), "utf8");
-    expect(readme).toContain("premiere-pro-mcp-demo-poster.png");
-    expect(readme).toContain("not a Premiere panel screenshot or licensed-host proof");
     expect(readme).toContain("docs/quickstart/README.md");
+    expect(readme).toContain("illustration and host-proof limitations");
+    expect(readme).toContain("use the Zura installation instructions above");
   });
 });

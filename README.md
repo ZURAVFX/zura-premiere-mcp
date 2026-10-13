@@ -40,6 +40,8 @@ For another MCP client, run `bash INSTALL-ZURA-PREMIERE-MCP.command --skip-codex
 
 ## Capabilities
 
+Current source version and counts are recorded in [release metadata](release-metadata.json) and the generated [product manifest](public-product-manifest.json). These describe this checkout, not an npm publication. Historical `plugins/premiere-pro` and `claude-plugins/premiere-pro` adapters target upstream and are not Zura installers. Use the source installer above and its generated client configuration.
+
 - Inspect Premiere projects, sequences, clips, transcripts and media.
 - Make bounded timeline edits and verify their results by reading the project state back.
 - Export sequences and inspect rendered files.
@@ -48,9 +50,17 @@ For another MCP client, run `bash INSTALL-ZURA-PREMIERE-MCP.command --skip-codex
 
 The server does not upload footage or operate a hosted Premiere session. A tool being available does not establish that the current Premiere version supports it; see [supported actions](docs/supported-actions.md) and [host validation limits](docs/editorial-workflow-host-validation.md).
 
+`detect_silence` and local media probes need FFmpeg/ffprobe on PATH. Install with `winget install Gyan.FFmpeg` on Windows, or `brew install ffmpeg` on macOS when Homebrew is already available. Silence measurements are editing evidence, not permission to remove intentional pauses.
+
+The Windows source installer sets Adobe's unsigned development extension option as a String (`REG_SZ`). Source-managed updates use the installer; the panel does not run an npm updater.
+
+Additional client guidance: [GPT-6 Sol and Luna](docs/gpt-6-sol-luna.md), [Claude Opus](docs/claude-opus-5-5.md), [Claude Fable](docs/claude-fable-5-1.md). These inherited guides do not establish model editing quality. See the [historical quick-start documentation](docs/quickstart/README.md) for its explicit illustration and host-proof limitations; use the Zura installation instructions above.
+
 ## Local Reel Workflow
 
 For centered local reels, use `PREMIERE_MCP_TOOL_PACKS=reels` to advertise a compact editing/export catalog. Measure source-shot subject regions, plan static crops with `plan_centered_shot_framing`, verify a rendered pilot, then apply up to 50 clips per active sequence with `set_static_clip_framing_batch`. The batch preflights all targets, refuses animated Motion and Auto Reframe, verifies host units and values, and reports an applied prefix if a later write fails. Rendered composition still needs inspection. Detect cuts only within shortlisted ranges using the optional start/duration arguments of `detect_source_scene_changes`.
+
+Hold the measured face/head centre in a static crop by default. Inspect leaning and gestures across the retained shot. Use a purposeful direct cut or a wider supplied view when necessary to preserve visibility. For explicitly requested tracking comparisons or an exceptional movement that needs correction, `set_clip_position_path_batch` applies measured native Motion paths within individual continuous shots. It refuses existing Position/Scale animation, Auto Reframe and retimed clips, and reads back every stored key. The actual export must verify motion because Adobe provides no interpolation getter. Never animate a crop between speakers or camera shots. Reference examples do not authorise additional branding or outros.
 
 Read the new sequence's actual timebase with `get_sequence_settings` before assembly. If it differs from the requested rate, use `get_sequence_presets` to find a local `.sqpreset`, then create and verify a correctly timed sequence. For numbered PNG overlays, `import_image_sequence` can set and read back the intended frame rate in the same call; the reels pack also exposes independent footage-interpretation readback and a guarded caption overwrite route. These operations need no Premiere dialog or UI automation.
 

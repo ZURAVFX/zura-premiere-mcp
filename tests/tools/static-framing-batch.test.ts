@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runInNewContext } from "node:vm";
+import { parse } from "acorn";
 import { getHelpersSource } from "../../src/bridge/script-builder.js";
 
 vi.mock("../../src/bridge/file-bridge.js", () => ({ sendCommand: vi.fn(), sendRawCommand: vi.fn(), getTempDir: () => "/tmp/test", cleanupTempDir: vi.fn() }));
@@ -30,6 +31,10 @@ describe("one-command static framing", () => {
     expect(states[0]).toMatchObject({ Position: [0.6, 0.5], Scale: 180, "Scale Width": 180 });
     expect(states[1]).toMatchObject({ Position: [0.4, 0.5], Scale: 210, "Scale Width": 210 });
     expect(send).toHaveBeenCalledTimes(1);
+    // Acorn's default permits reserved object keys, unlike the live Adobe ES3
+    // engine. An unquoted `static` receipt key caused EvalScript error before
+    // any writes, despite passing the old syntax gate and Node host mocks.
+    parse(String(send.mock.calls[0][0]), { ecmaVersion: 3, allowReserved: "never" });
   });
   it.each([{ animated: true }, { autoReframe: true }])("preflights every clip before changing any when %j", async (options) => {
     const states = host(options);

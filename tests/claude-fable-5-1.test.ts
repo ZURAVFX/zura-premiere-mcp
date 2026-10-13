@@ -10,9 +10,7 @@ describe("Claude Fable 5.1 support guidance", () => {
   const readme = read("README.md");
 
   it("keeps the repository doc linked from the README client section", () => {
-    expect(readme).toContain("### Claude Fable 5.1");
     expect(readme).toContain("docs/claude-fable-5-1.md");
-    expect(readme).toContain("claude-fable-5-1");
     expect(doc).toContain("The server does not run an Anthropic model itself.");
   });
 

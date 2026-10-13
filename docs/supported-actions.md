@@ -10,11 +10,11 @@ source catalog may include unreleased actions.
 
 | Surface | Count | Availability |
 | --- | ---: | --- |
-| Registered core actions | 396 | CEP/local server catalog; host and authority checks still apply |
-| Default-profile core actions | 394 | Advertised with `inspect,edit,export,filesystem` |
+| Registered core actions | 397 | CEP/local server catalog; host and authority checks still apply |
+| Default-profile core actions | 395 | Advertised with `inspect,edit,export,filesystem` |
 | Restricted core actions | 2 | Require explicit `unsafe-script` authority |
 | Authenticated UXP additions | 96 | Advertised only while a compatible authenticated UXP panel is connected |
-| Default profile with UXP | 490 | 394 core plus 96 UXP tools |
+| Default profile with UXP | 491 | 395 core plus 96 UXP tools |
 
 ## How to read support
 
@@ -357,6 +357,7 @@ operation” when the tool has no enum-based mode.
 | `set_clip_opacity` | Default profile | Single operation | Set the opacity of a video clip (0-100) using English or measured Spanish built-in names, then read it back. |
 | `set_clip_pan` | Default profile | Single operation | Set and read back the pan (left/right balance) on an audio clip, including Channel Volume layouts. |
 | `set_clip_position` | Default profile | Single operation | Set the Position property on a video clip's Motion effect using English or measured Spanish built-in names, then read it back. Values are in pixels. |
+| `set_clip_position_path_batch` | Default profile | Single operation | Apply measured native Motion Position paths to up to 20 static clips in the active sequence in one CEP command. Pixel coordinates, clip-relative seconds. Refuses existing Position animation and Auto Reframe; preflights all targets. Reads every key back. Linear interpolation is requested but cannot be read back: rendered motion verification remains required. Never use for transitions between speakers or camera shots. |
 | `set_clip_properties` | Default profile | Single operation | Set supported clip properties (opacity, scale, position, rotation) and read each requested value back. Clip speed is unsupported and fails before mutation; use set_clip_duration to change a clip's timeline length. |
 | `set_clip_properties_batch` | Default profile | Single operation | Apply Motion/Opacity values to up to 16 clips after preflighting every target property. The handler reads each requested value back and never reports a partial batch as verified. |
 | `set_clip_rotation` | Default profile | Single operation | Set the Rotation property on a video clip's Motion effect using English or measured Spanish built-in names, then read it back. |

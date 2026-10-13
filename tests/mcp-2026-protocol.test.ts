@@ -46,7 +46,7 @@ describe("MCP 2026-07-28 protocol entry", () => {
     expect(client.getProtocolEra()).toBe("modern");
 
     const capabilities = client.getServerCapabilities();
-    expect(capabilities?.extensions?.["io.github.leancoderkavy/premiere-pro"]).toMatchObject({
+    expect(capabilities?.extensions?.["io.github.zuravfx/zura-premiere"]).toMatchObject({
       protocolRevision: "2026-07-28",
       dualEra: true,
     });

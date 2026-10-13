@@ -198,7 +198,7 @@ describe("stdio CLI entry point", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     let loaded = await importCli(["--doctor"]);
     await expect(loaded.promise).rejects.toThrow("EXIT:0");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("Premiere MCP local check"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Zura local check"));
     vi.resetModules();
     log.mockClear();
     loaded = await importCli(["--support-bundle"]);
@@ -231,7 +231,7 @@ describe("stdio CLI entry point", () => {
     const loaded = await importCli(["--check-update"]);
     await expect(loaded.promise).rejects.toThrow("EXIT:0");
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Zura Premiere MCP source and releases"));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("does not contact GitHub"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("does not contact npm"));
     expect(mocks.execFileSync).not.toHaveBeenCalled();
   });
 

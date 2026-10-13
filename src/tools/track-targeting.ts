@@ -1,4 +1,5 @@
 import { setProjectItemStartTime } from "./project-item-start-time.js";
+import { positionPathTool } from './position-path.js';
 import {
   buildToolScript,
   escapeForExtendScript,
@@ -117,6 +118,7 @@ function validateTrackTargetArgs(args: {
 
 export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
   return {
+    set_clip_position_path_batch: positionPathTool(bridgeOptions),
     set_target_track: {
       description:
         "Target or untarget one video or audio track for source-patched insert/overwrite edits. Premiere allows several tracks of a type to be targeted at once, so by default (exclusive=true) targeting a track also untargets every other track of the same type. Reads back every track of that type and reports verified only when the readback matches the requested state; otherwise committed_unverified or an error.",
@@ -1050,7 +1052,7 @@ export function getTrackTargetingTools(bridgeOptions: BridgeOptions) {
               var read = target.point.getValue();
               if (!read || read.length < 2 || Math.abs(read[0] - written[0]) > 1e-4 * (target.units.normalized ? 1 : 1000) || Math.abs(read[1] - written[1]) > 1e-4 * (target.units.normalized ? 1 : 1000)) return __error("Position readback mismatch.", failureData);
               for (var v = 0; v < target.properties.length; v++) if (target.properties[v].isTimeVarying()) return __error("Motion became animated.", failureData);
-              verified.push({ node_id: entry.node_id, scale: entry.scale, x: entry.x, y: entry.y, hostValue: [read[0], read[1]], hostNormalized: target.units.normalized, static: true });
+              verified.push({ node_id: entry.node_id, scale: entry.scale, x: entry.x, y: entry.y, hostValue: [read[0], read[1]], hostNormalized: target.units.normalized, "static": true });
             } catch (eWrite) { return __error("Framing write failed: " + eWrite.toString(), failureData); }
           }
           return __result({ sequenceId: String(sequence.sequenceID), verifiedClips: verified, verified: true, verificationScope: "Static Motion property readback only; inspect rendered images for composition and black edges." });

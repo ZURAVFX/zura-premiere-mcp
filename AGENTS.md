@@ -42,7 +42,7 @@ Read only what the task needs. Current source and release metadata beat dated sn
 | UXP 26.3 coverage | `docs/adobe-uxp-26.3-coverage.md` |
 | Claude Code develop skill | `claude-plugins/premiere-pro/skills/develop-premiere-pro-mcp/SKILL.md` |
 
-Do not mix published-package counts with development-source counts. `docs/supported-actions.md` is the source catalog; the published npm artifact is what the website reports. In this repo the README `### Latest release:` heading anchors client version pins. A listed tool is not proof that a particular Premiere host supports it.
+`docs/supported-actions.md` is the current source catalog. `release-metadata.json` anchors this source distribution's version. Historical upstream npm adapters are retained for provenance and are not the Zura installation route. A listed tool is not proof that a particular Premiere host supports it.
 
 ## Architecture
 
@@ -182,7 +182,7 @@ The supported distribution path is this public source repository, with local bui
 Follow `docs/release-conventions.md`. GitHub release titles must equal their Git tags:
 `v<SemVer>` (for example, `v1.19.0` or `v1.20.0-rc.1`). No product prefix or summary
 suffix; summaries belong in release notes. Package and manifest versions omit `v`.
-Keep the README `### Latest release:` heading and existing changelog format intact.
+Keep release metadata, the source installer and the changelog aligned. Do not introduce an npm publication claim to satisfy historical upstream tests.
 For historical cleanup, edit display titles only; never retag or republish versions.
 Preview or check drift with `scripts/normalize-release-names.mjs`; apply authorized
 title repairs with `--apply` and verify GitHub readback. New publication still needs

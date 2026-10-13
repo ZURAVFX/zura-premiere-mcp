@@ -111,7 +111,7 @@ describe("non-technical diagnostics", () => {
       expect.objectContaining({ id: "uxp_bridge", state: "not_checked" }),
     ]));
     const human = renderDoctorHuman(report);
-    expect(human).toContain("Premiere MCP local check: needs attention");
+    expect(human).toContain("Zura local check: needs attention");
     expect(human).toContain("Next: Install the Connector");
     expect(human).toContain("Not checked: UXP connection");
   });
@@ -140,6 +140,6 @@ describe("non-technical diagnostics", () => {
     expect(inspected).toContain("Library");
     expect(report.components.find((item) => item.id === "uxp_bridge")).toMatchObject({ state: "ready" });
     expect(JSON.stringify(report)).not.toContain("secret");
-    expect(renderDoctorHuman(report)).toContain("Premiere MCP local check: ready");
+    expect(renderDoctorHuman(report)).toContain("Zura local check: ready");
   });
 });

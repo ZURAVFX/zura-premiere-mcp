@@ -505,25 +505,26 @@ export function getBridgeLiveness(
 }
 
 function heartbeatFailure(liveness: BridgeLiveness, hostLabel = "Premiere Pro", requireHeartbeat = false): CommandResult | null {
+  const panelName = hostLabel === "After Effects" ? "MCP for Adobe After Effects" : "Zura Premiere MCP";
   if (liveness.state === "waiting") {
     return {
       success: false,
       error:
-        `The Zura panel is open but not running. In ${hostLabel}, open Window > Extensions > Zura Premiere MCP, wait for it to finish starting, then retry once.`,
+        `The Zura panel is open but not running. In ${hostLabel}, open Window > Extensions > ${panelName}, wait for it to finish starting, then retry once.`,
     };
   }
   if (liveness.state === "stale") {
     return {
       success: false,
       error:
-        `The Zura panel heartbeat is stale. Reopen Window > Extensions > Zura Premiere MCP in ${hostLabel}, dismiss any blocking dialog, and retry once after it reports running.`,
+        `The Zura panel heartbeat is stale. Reopen Window > Extensions > ${panelName} in ${hostLabel}, dismiss any blocking dialog, and retry once after it reports running.`,
     };
   }
   if (requireHeartbeat && liveness.state === "unknown") {
     return {
       success: false,
       error:
-        `${hostLabel} is not running the Zura panel (no heartbeat). Open ${hostLabel}, then Window > Extensions > Zura Premiere MCP, and retry. No command was sent.`,
+        `${hostLabel} is not running the Zura panel (no heartbeat). Open ${hostLabel}, then Window > Extensions > ${panelName}, and retry. No command was sent.`,
     };
   }
   return null;

@@ -19,14 +19,20 @@ const versionedJson = [
   "package.json",
   "claude-desktop/manifest.json",
   "uxp-plugin/manifest.json",
-  "plugins/premiere-pro/.codex-plugin/plugin.json",
-  "claude-plugins/premiere-pro/.claude-plugin/plugin.json",
+  "registry/server.json",
 ];
 for (const path of versionedJson) {
   if (readJson(path).version !== release.version) {
     throw new Error(`${path} does not match release metadata version ${release.version}`);
   }
 }
+
+const lock = readJson("package-lock.json");
+if (lock.version !== release.version || lock.packages[""].version !== release.version) {
+  throw new Error("Dependency lock version does not match release metadata");
+}
+const uxpVersion = readJson("uxp-plugin/manifest.json").version;
+if (uxpVersion !== release.version) throw new Error("UXP version does not match release metadata");
 
 const cepManifest = read("cep-plugin/CSXS/manifest.xml");
 if (!cepManifest.includes(`ExtensionBundleVersion="${release.version}"`)) {

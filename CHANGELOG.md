@@ -1631,3 +1631,10 @@ whole fix.
 - **captions** (1) — Create caption tracks
 - **playback** (4) — Timeline and source monitor playback control
 - **project-manager** (1) — Project consolidation and transfer
+## 1.24.0
+
+- Fix static framing batches rejected by Adobe's ES3 engine because of an unquoted reserved receipt key. Strengthen generated-script validation to catch reserved property names.
+- Add bounded native Motion Position path batches for explicitly requested smooth reframing within continuous shots. Preflight identities, static Motion state and clip timing; verify stored keys and report interpolation as requiring rendered verification.
+- Clarify face/head centring, static defaults, movement-envelope checks and the prohibition on tracking between speakers or camera shots.
+- Live Windows validation: two 16.44-second vertical comparison exports, caption PNGs interpreted at 24 fps in a 25 fps sequence, static batch readback, 76 native path keys and all 375 rendered tracking frames checked against the requested path. This is specific host evidence, not a cross-platform guarantee.
+

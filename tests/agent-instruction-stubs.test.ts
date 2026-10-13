@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readPublishedVersion } from "./helpers/published-version.js";
+
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
@@ -38,15 +38,10 @@ describe("coding-agent instruction stubs", () => {
     expect(rule).not.toContain("OPENROUTER");
   });
 
-  it("pins client CEP install commands to the published package", () => {
-    const version = readPublishedVersion();
-    const pin = `npx -y premiere-pro-mcp@${version} --install-cep`;
-    for (const path of [
-      "plugins/premiere-pro/skills/edit-premiere-project/SKILL.md",
-      "claude-plugins/premiere-pro/skills/edit-premiere-project/SKILL.md",
-    ]) {
-      expect(read(path), path).toContain(pin);
-    }
-    expect(read("README.md")).toContain("Do not install the upstream npm package");
+  it("routes Zura setup to the local source installer instead of upstream adapters", () => {
+    expect(read("README.md")).toContain("node INSTALL-ZURA-PREMIERE-MCP.mjs");
+    expect(read("README.md")).toContain("not Zura installers");
+    expect(read("AGENTS.md")).toContain("Do not substitute the upstream npm package");
+    expect(read("src/index.ts")).not.toContain("npx -y premiere-pro-mcp");
   });
 });

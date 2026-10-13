@@ -51,7 +51,7 @@ function isLoopbackPortInUse(error: unknown): boolean {
 
 function printUpdateInstructions(): void {
   console.log("Zura Premiere MCP source and releases are maintained at https://github.com/ZURAVFX/zura-premiere-mcp.");
-  console.log("Pull the latest source and rerun INSTALL-ZURA-PREMIERE-MCP.ps1 to update the local MCP and Premiere panel.");
+  console.log("Pull the latest source and rerun node INSTALL-ZURA-PREMIERE-MCP.mjs to update the local MCP and Premiere panel on Windows or macOS.");
   console.log("This command does not contact npm or update files automatically.");
 }
 

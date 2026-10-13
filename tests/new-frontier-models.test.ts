@@ -8,9 +8,7 @@ describe("GPT-6 Sol/Luna and Claude Opus 5.5 guidance", () => {
   const readme = read("README.md");
 
   it("links both model docs from the README client section", () => {
-    expect(readme).toContain("### GPT-6 Sol and GPT-6 Luna");
     expect(readme).toContain("docs/gpt-6-sol-luna.md");
-    expect(readme).toContain("### Claude Opus 5.5");
     expect(readme).toContain("docs/claude-opus-5-5.md");
   });
 

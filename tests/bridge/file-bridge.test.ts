@@ -892,7 +892,7 @@ describe("sendCommand", () => {
       tempDir: "/tmp/test-bridge",
       hostLabel: "After Effects",
       requireHeartbeat: true,
-    })).resolves.toMatchObject({ success: false, error: expect.stringContaining("After Effects is not running its MCP connector") });
+    })).resolves.toMatchObject({ success: false, error: expect.stringContaining("Window > Extensions > MCP for Adobe After Effects") });
     expect(mockedRenameSync).not.toHaveBeenCalled();
   });
 

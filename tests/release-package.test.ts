@@ -57,16 +57,11 @@ describe("npm release package verification", () => {
     expect(verifier).toContain('"lib", "node_modules", "npm"');
   });
 
-  it("requires provenance and package verification in every npm publish path", () => {
-    const publish = read(".github/workflows/npm-publish.yml");
+  it("verifies source packages in CI without an automatic npm publication route", () => {
     const crossPlatform = read(".github/workflows/cross-platform.yml");
-
-    expect(publish).toContain("npm publish --provenance --access public");
-    expect(publish).toContain("npm run pack:check");
-    expect(publish).toContain("npm run premiere:docs-inventory:check");
-    expect(publish.indexOf("npm run premiere:docs-inventory:check"))
-      .toBeLessThan(publish.indexOf("npm run build"));
     expect(crossPlatform).toContain("npm run pack:check");
+    expect(crossPlatform).toContain("npm run check");
+    expect(read("README.md")).toContain("not an npm publication");
   });
 
   it("validates the Claude bundle against its declared production dependencies", () => {

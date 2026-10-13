@@ -1,5 +1,5 @@
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -146,7 +146,7 @@ describe("project context index", () => {
   });
 
   it("persists locally without retaining a native media path", async () => {
-    const container = await mkdtemp(path.join(tmpdir(), "ppmcp-context-test-"));
+    const container = await mkdtemp(path.join(process.platform === "win32" ? homedir() : tmpdir(), "ppmcp-context-test-"));
     const directory = process.platform === "win32" ? path.join(container, "private") : container;
     temporaryDirectories.push(container);
     const repository = new ProjectContextRepository({ backend: "json", directory });
@@ -163,7 +163,7 @@ describe("project context index", () => {
   }, 40000);
 
   it.runIf(supportsNodeSqlite)("uses SQLite when requested and supports complete repository lifecycle", async () => {
-    const container = await mkdtemp(path.join(tmpdir(), "ppmcp-context-sqlite-test-"));
+    const container = await mkdtemp(path.join(process.platform === "win32" ? homedir() : tmpdir(), "ppmcp-context-sqlite-test-"));
     const directory = process.platform === "win32" ? path.join(container, "private") : container;
     temporaryDirectories.push(container);
     const repository = new ProjectContextRepository({ backend: "sqlite", directory });
@@ -185,7 +185,7 @@ describe("project context index", () => {
   });
 
   it("handles missing and corrupt JSON entries without hiding valid project summaries", async () => {
-    const container = await mkdtemp(path.join(tmpdir(), "ppmcp-context-json-test-"));
+    const container = await mkdtemp(path.join(process.platform === "win32" ? homedir() : tmpdir(), "ppmcp-context-json-test-"));
     const directory = process.platform === "win32" ? path.join(container, "private") : container;
     temporaryDirectories.push(container);
     const repository = new ProjectContextRepository({ backend: "json", directory });
@@ -205,7 +205,7 @@ describe("project context index", () => {
   });
 
   it("validates repository backend, record bounds, and context directory overrides", async () => {
-    const container = await mkdtemp(path.join(tmpdir(), "ppmcp-context-env-test-"));
+    const container = await mkdtemp(path.join(process.platform === "win32" ? homedir() : tmpdir(), "ppmcp-context-env-test-"));
     const directory = process.platform === "win32" ? path.join(container, "private") : container;
     temporaryDirectories.push(container);
     vi.stubEnv("PREMIERE_CONTEXT_DIR", directory);

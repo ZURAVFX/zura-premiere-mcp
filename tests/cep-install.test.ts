@@ -8,11 +8,10 @@ describe("CEP installation metadata", () => {
   it("keeps the CEP bundle and extension versions aligned with package.json", () => {
     const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
     const manifest = readFileSync(join(root, "cep-plugin", "CSXS", "manifest.xml"), "utf8");
-    const updater = readFileSync(join(root, "cep-plugin", "updater.cjs"), "utf8");
 
     expect(manifest).toContain(`ExtensionBundleVersion="${pkg.version}"`);
     expect(manifest.match(new RegExp(`Version="${pkg.version.replaceAll(".", "\\.")}"`, "g"))).toHaveLength(3);
-    expect(updater).toContain(`CURRENT_VERSION = "${pkg.version}"`);
+    expect(readFileSync(join(root, "cep-plugin", "index.html"), "utf8")).not.toContain("updater.cjs");
   });
 
   it("declares Premiere compatibility with a Marketplace-safe minimum only", () => {
@@ -54,31 +53,27 @@ describe("CEP installation metadata", () => {
   it("builds and verifies a signed Windows CEP release package", () => {
     const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
     const signer = readFileSync(join(root, "scripts", "build-signed-cep.ps1"), "utf8");
-    const workflow = readFileSync(join(root, ".github", "workflows", "npm-publish.yml"), "utf8");
+    const workflow = readFileSync(join(root, ".github", "workflows", "cep-release.yml"), "utf8");
 
     expect(packageJson.files).toContain("artifacts/MCPBridgeCEP.zxp");
     expect(signer).toContain("-selfSignedCert");
     expect(signer).toContain("-verify");
     expect(workflow).toContain("build-signed-cep");
-    expect(workflow).toContain("signed-cep");
+    expect(workflow).toContain("build-signed-cep.ps1");
   });
 
-  it("publishes connector updates and exposes the updater in the panel", () => {
+  it("publishes verified connector assets and keeps source updates out of the panel", () => {
     const workflow = readFileSync(join(root, ".github", "workflows", "cep-release.yml"), "utf8");
     const panel = readFileSync(join(root, "cep-plugin", "index.html"), "utf8");
     const panelLogic = readFileSync(join(root, "cep-plugin", "main.js"), "utf8");
 
     expect(workflow).toContain("release:");
     expect(workflow).toContain("artifacts/MCPBridgeCEP.zxp");
-    expect(panel).toContain('src="updater.cjs"');
-    expect(panel).toContain("MCP updates");
-    expect(panel).toContain('aria-describedby="updateDetail"');
-    expect(panelLogic).toContain("Update after quit");
-    expect(panelLogic).toContain("scheduleWindowsGlobalUpdate");
-    expect(panelLogic).toContain("window.confirm");
-    expect(panelLogic).toContain("getPerUserGlobalInstall");
-    expect(panelLogic).toContain("LATEST_PACKAGE_API");
-    expect(panelLogic).toContain("This panel will not modify a source checkout.");
+    expect(panel).not.toContain('src="updater.cjs"');
+    expect(panel).toContain("Zura Premiere MCP");
+    expect(panelLogic).not.toContain("LATEST_PACKAGE_API");
+    expect(panelLogic).not.toContain("scheduleWindowsGlobalUpdate");
+    expect(readFileSync(join(root, "src", "index.ts"), "utf8")).toContain("node INSTALL-ZURA-PREMIERE-MCP.mjs");
     expect(panelLogic).toContain("writeResponseFile(resFilePath, response)");
     expect(panelLogic).toContain("fs.renameSync(stagedPath, filePath)");
     expect(panelLogic).toContain('"bridge-heartbeat.json"');
