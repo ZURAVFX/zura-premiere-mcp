@@ -1,7 +1,7 @@
 {
   "name": "zura-premiere-mcp",
   "mcpName": "io.github.zuravfx/zura-premiere",
-  "version": "1.24.2",
+  "version": "1.24.3",
   "description": "Zura's local-first MCP for verified Adobe Premiere Pro editing workflows, with a local CEP connector and optional authenticated UXP support.",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
@@ -246,3 +246,4 @@
     "js-yaml": "^4.3.2"
   }
 }
+

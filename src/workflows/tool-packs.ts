@@ -54,10 +54,11 @@ export const WORKFLOW_TOOL_PACKS: readonly WorkflowToolPack[] = [
     tools: [
       "verify_premiere_connection", "get_project_info", "list_project_items", "find_project_item_by_name", "get_item_info",
       "list_sequences", "get_active_sequence", "get_sequence_settings", "get_sequence_structure", "get_clip_properties",
-      "get_effect_properties", "get_footage_interpretation", "save_project_as", "save_project", "set_active_sequence", "create_project", "import_media",
+      "get_effect_properties", "get_footage_interpretation", "save_project_as", "save_project", "set_active_sequence", "import_media",
+      "add_audio_keyframes", "plan_word_mute_ranges", "plan_pause_tightening", "add_transition",
       "create_subclip", "create_sequence_from_clips", "create_sequence", "get_sequence_presets", "set_sequence_settings", "duplicate_sequence",
       "add_to_timeline", "overwrite_clip", "remove_from_timeline", "trim_clip", "split_clip", "add_track", "import_image_sequence", "set_override_frame_rate", "plan_centered_shot_framing",
-      "set_static_clip_framing_batch", "set_clip_position_path_batch", "set_clip_position", "set_clip_scale", "remove_effect",
+      "set_static_clip_framing_batch", "set_clip_position_path_batch", "remove_effect",
       "capture_frame", "export_frame", "export_sequence_review_frames", "export_sequence_clip_review_frames",
       "detect_source_scene_changes", "rank_short_form_candidates", "get_clip_transcript_uxp", "search_clip_transcript_uxp",
       "validate_project_for_export", "validate_export_preset", "get_encoder_presets", "export_sequence", "add_to_render_queue", "start_batch_encode",

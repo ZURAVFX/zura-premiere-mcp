@@ -1,5 +1,5 @@
 {
-  "version": "1.24.2",
+  "version": "1.24.3",
   "coreTools": 397,
   "defaultProfileTools": 395,
   "uxpAdditionalTools": 96,
@@ -10,3 +10,4 @@
   "premiereVersions": "2020\u00e2\u20ac\u201c2026",
   "uxpMinimumVersion": "25.6.0"
 }
+

@@ -7,15 +7,16 @@
     "url": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "source": "github"
   },
-  "version": "1.24.2",
+  "version": "1.24.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "zura-premiere-mcp",
-      "version": "1.24.2",
+      "version": "1.24.3",
       "transport": {
         "type": "stdio"
       }
     }
   ]
 }
+
