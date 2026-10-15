@@ -28,6 +28,7 @@ jobs:
           name: connector-package
           path: artifacts/MCPBridgeCEP.zxp
           if-no-files-found: error
+          retention-days: 7
 
   windows-installer:
     needs: connector-package
@@ -71,6 +72,7 @@ jobs:
           name: connector-installer-windows
           path: artifacts/connector-installers/*.exe
           if-no-files-found: error
+          retention-days: 7
 
   macos-installer:
     needs: connector-package
@@ -93,3 +95,4 @@ jobs:
             artifacts/connector-installers/*.pkg
             artifacts/connector-installers/*.command
           if-no-files-found: error
+          retention-days: 7
