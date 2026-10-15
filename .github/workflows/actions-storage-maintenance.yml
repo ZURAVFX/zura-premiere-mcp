@@ -1,0 +1,83 @@
+name: Actions storage maintenance
+run-name: Clean superseded Premiere installer artifacts
+on:
+  push:
+    branches: [maintenance/actions-storage-cleanup-20261015]
+    paths: [.github/workflows/actions-storage-maintenance.yml]
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: actions-storage-maintenance
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete only superseded artifacts from audited completed runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          repo = os.environ['GITHUB_REPOSITORY']
+          if repo != 'ZURAVFX/zura-premiere-mcp': raise RuntimeError('Unexpected repository')
+          def api(path, method='GET'):
+              if method != 'GET' and not path.startswith('/actions/artifacts/'):
+                  raise RuntimeError('Write outside approved artifact scope')
+              headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'audited-actions-cleanup', 'X-GitHub-Api-Version': '2022-11-28', 'Authorization': 'Bearer ' + os.environ['GH_TOKEN']}
+              request = urllib.request.Request('https://api.github.com/repos/' + repo + path, headers=headers, method=method)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  if method == 'DELETE':
+                      if response.status != 204: raise RuntimeError('Deletion not confirmed')
+                      return None
+                  return json.load(response)
+          def pages(path, key=None):
+              result = []
+              for page in range(1, 101):
+                  payload = api(path + '?per_page=100&page=' + str(page))
+                  batch = payload[key] if key else payload
+                  result.extend(batch)
+                  if len(batch) < 100: return result
+              raise RuntimeError('Incomplete inventory')
+          # These 26 completed runs were inventoried before this workflow was added.
+          audited_runs = {38098901647,38098953302,38098962391,38098967247,38098978931,38098995501,38098986277,38133185573,38143785775,38160011726,38166148419,38239368441,38241602731,38242169475,38248028210,38248648792,38269224706,38269979807,38271858904,38294982702,38295233076,38295498229,38307832104,38441899342,38443354775,38446750120}
+          names = {'connector-package', 'connector-installer-macos', 'connector-installer-windows'}
+          before = {a['id']: a for a in pages('/actions/artifacts', 'artifacts') if not a['expired']}
+          runs = {r['id']: r for r in pages('/actions/runs', 'workflow_runs')}
+          def group(a): return (a['name'], a['workflow_run']['head_branch'])
+          latest = {}
+          for a in before.values():
+              r = runs.get(a['workflow_run']['id'], {})
+              if a['name'] in names and r.get('status') == 'completed' and r.get('conclusion') == 'success':
+                  k = group(a)
+                  if k not in latest or a['created_at'] > latest[k]['created_at']: latest[k] = a
+          protected = {a['id'] for a in latest.values()} | {11838307990,11838198072,11839385364}
+          if not protected.issubset(before): raise RuntimeError('Latest main installers are missing')
+          pending = []
+          for a in before.values():
+              run_id = a['workflow_run']['id']
+              if run_id not in audited_runs or a['id'] in protected: continue
+              r = runs.get(run_id, {})
+              if a['name'] not in names or r.get('status') != 'completed' or r.get('path') != '.github/workflows/connector-installers.yml':
+                  raise RuntimeError('Unexpected artifact or active run')
+              if a['created_at'] >= '2026-10-14T00:00:00Z': raise RuntimeError('Artifact is newer than the audit')
+              replacement = latest.get(group(a))
+              if not replacement or replacement['created_at'] <= a['created_at']: raise RuntimeError('No newer successful replacement')
+              pending.append(a)
+          releases_before = pages('/releases')
+          fingerprint = lambda rs: sorted((r['id'], tuple(sorted((a['id'], a['name'], a['size']) for a in r['assets']))) for r in rs)
+          print('VALIDATED_PREMIERE_PLAN ' + json.dumps({'delete_count': len(pending), 'delete_bytes': sum(a['size_in_bytes'] for a in pending), 'preserved_artifacts': len(protected)}), flush=True)
+          for a in pending:
+              api('/actions/artifacts/' + str(a['id']), 'DELETE')
+              print('DELETED ' + json.dumps({'id': a['id'], 'name': a['name'], 'bytes': a['size_in_bytes']}), flush=True)
+          after = {a['id']: a for a in pages('/actions/artifacts', 'artifacts') if not a['expired']}
+          if not protected.issubset(after) or {a['id'] for a in pending}.intersection(after): raise RuntimeError('Post-cleanup verification failed')
+          if fingerprint(releases_before) != fingerprint(pages('/releases')): raise RuntimeError('Release inventory changed')
+          report = {'repo': repo, 'deleted_artifacts': len(pending), 'deleted_bytes': sum(a['size_in_bytes'] for a in pending), 'before_live_bytes': sum(a['size_in_bytes'] for a in before.values()), 'remaining_artifacts': len(after), 'remaining_live_bytes': sum(a['size_in_bytes'] for a in after.values()), 'latest_successful_per_branch_and_platform_preserved': True, 'published_releases_unchanged': True}
+          print('VERIFIED_PREMIERE_CLEANUP ' + json.dumps(report), flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('# Verified Premiere artifact cleanup\n\n```json\n' + json.dumps(report, indent=2) + '\n```\n\nPreserved the latest successful connector package, Windows installer and macOS installer for every branch, plus source code, all releases and workflow history.\n')
+          PY
