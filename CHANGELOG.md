@@ -1,3 +1,9 @@
+## [1.25.1] - 2026-10-16
+
+- Automatically create native adjustment layers from a bundled media-free template when the open project has no reusable source. Import into the open project, refuse occupied ranges, and verify layer type and timing.
+- Expose adjustment-layer placement, effect application, playhead positioning and keyframe readback in the compact Reels pack. No Computer Use or manual layer creation is required.
+- Live Windows Premiere 26.2 verification: native template import and adjustment layer placement, plus Gaussian Blur (Legacy) animation under graphics. Mac and older host template compatibility remain unverified.
+
 ## [1.25.0] - 2026-10-16
 
 - Expose native Auto Reframe in the compact Reels tool pack for explicitly requested tracking, with Slower Motion guidance and rendered-review requirements.

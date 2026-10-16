@@ -1,3 +1,4 @@
+import { prepareAdjustmentTemplate } from "../bridge/adjustment-template.js";
 import {
   buildToolScript,
   escapeForExtendScript,
@@ -430,27 +431,45 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
 
     add_adjustment_layer: {
       description:
-        "EXPERIMENTAL (QE DOM): add an adjustment layer at the playhead on the specified track. Refuses when the host lacks the QE APIs; verifies a new public TrackItem using isAdjustmentLayer and placement readback.",
+        "Add an adjustment layer at the playhead. Reuse a verified adjustment-layer source or automatically import the bundled media-free native template into the open project, then use public overwriteClip. Legacy QE creation is host-dependent. Refuses occupied placement and never opens UI. Read back layer type and timing.",
       parameters: {
         type: "object" as const,
         properties: {
+          template_project_path: { type: "string", description: "Optional local .prproj containing a real adjustment layer. Imported into the currently open project, never opened as another project. Requires template_sequence_id." },
+          template_sequence_id: { type: "string", description: "Sequence ID inside template_project_path. Both template fields must be supplied together." },
+          duration_seconds: { type: "number", description: "Optional frame-aligned layer duration in seconds. Defaults to one second for the template/reuse route." },
           track_index: {
             type: "number",
             description: "Video track index (default: 0)",
           },
         },
       },
-      handler: async (args: { track_index?: number }) => {
+      handler: async (args: { track_index?: number; template_project_path?: string; template_sequence_id?: string; duration_seconds?: number }) => {
         const track = args.track_index ?? 0;
         if (!Number.isSafeInteger(track) || track < 0) return { success: false, error: "track_index must be a non-negative integer." };
+        if (Boolean(args.template_project_path) !== Boolean(args.template_sequence_id)) return { success: false, error: "Supply template_project_path and template_sequence_id together." };
+        const duration = args.duration_seconds ?? 1;
+        if (!Number.isFinite(duration) || duration <= 0) return { success: false, error: "duration_seconds must be positive and finite." };
+        const preflight = await sendCommand(buildToolScript(`
+          var s = app.project.activeSequence;
+          if (!s) return __error("No active sequence");
+          var settings = s.getSettings();
+          return __result({ sequenceId: String(s.sequenceID), width: Number(settings.videoFrameWidth), height: Number(settings.videoFrameHeight), frameTicks: Number(s.timebase) });
+        `), bridgeOptions);
+        if (!preflight.success) return preflight;
+        const target = preflight.data as { sequenceId: string; width: number; height: number; frameTicks: number };
+        let template: { path: string; sequenceId: string };
+        try { template = args.template_project_path
+          ? { path: args.template_project_path, sequenceId: args.template_sequence_id! }
+          : prepareAdjustmentTemplate(target.width, target.height, target.frameTicks); }
+        catch (error) { return { success: false, error: String(error) }; }
+        const templatePath = escapeForExtendScript(template.path);
+        const templateId = escapeForExtendScript(template.sequenceId);
         const script = buildToolScript(`
           var seq = app.project.activeSequence;
           if (!seq) return __error("No active sequence");
+          if (String(seq.sequenceID) !== "${escapeForExtendScript(target.sequenceId)}") return __error("Active sequence changed after preflight; nothing was added.");
           if (${track} >= seq.videoTracks.numTracks) return __error("Video track index ${track} is out of range: the sequence has " + seq.videoTracks.numTracks + " video track(s).");
-
-          app.enableQE();
-          var qeSeq = qe.project.getActiveSequence();
-          if (!qeSeq) return __error("No active QE sequence");
 
           var playerTicks = parseFloat(seq.getPlayerPosition().ticks);
           if (!isFinite(playerTicks) || playerTicks < 0) return __error("Cannot read a valid playhead position; nothing was added.");
@@ -476,7 +495,69 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
             return null;
           }
 
-          // Path 1 (legacy, removed in PPro 2026): qeSeq.addAdjustmentLayer(track)
+          // A real adjustment-layer source can be reused through public APIs.
+          // A template import supplies that source when this host has no creation API.
+          var frameTicks = parseFloat(seq.timebase);
+          var durationTicks = ${duration} * TICKS_PER_SECOND;
+          if (!isFinite(frameTicks) || frameTicks <= 0 || Math.abs(durationTicks / frameTicks - Math.round(durationTicks / frameTicks)) > 0.001) return __error("duration_seconds must align to the active sequence frame grid; nothing was added.");
+          if (Math.abs(playerTicks / frameTicks - Math.round(playerTicks / frameTicks)) > 0.001) return __error("Playhead is not on the active sequence frame grid; nothing was added.");
+          if (domTrack.isLocked()) return __error("Target video track is locked; nothing was added.");
+          for (var oi = 0; oi < domTrack.clips.numItems; oi++) {
+            var occupied = domTrack.clips[oi];
+            if (parseFloat(occupied.start.ticks) < playerTicks + durationTicks && parseFloat(occupied.end.ticks) > playerTicks) return __error("Target range is occupied; refusing to overwrite existing clips.");
+          }
+          function __findAdjustmentSource(requiredId) {
+            for (var si = 0; si < app.project.sequences.numSequences; si++) {
+              var sourceSequence = app.project.sequences[si];
+              if (requiredId && String(sourceSequence.sequenceID) !== requiredId) continue;
+              var sourceSettings = sourceSequence.getSettings();
+              if (Number(sourceSettings.videoFrameWidth) !== ${target.width} || Number(sourceSettings.videoFrameHeight) !== ${target.height}) continue;
+              for (var ti = 0; ti < sourceSequence.videoTracks.numTracks; ti++) {
+                var clips = sourceSequence.videoTracks[ti].clips;
+                for (var ci = 0; ci < clips.numItems; ci++) {
+                  try { if (clips[ci].isAdjustmentLayer() === true && clips[ci].projectItem) return clips[ci].projectItem; } catch (ignoreLayer) {}
+                }
+              }
+            }
+            return null;
+          }
+          var source = ${args.template_project_path ? "null" : "__findAdjustmentSource()"};
+          var importedTemplate = false;
+          if (!source && "${templatePath}") {
+            var templateFile = new File("${templatePath}");
+            if (!templateFile.exists) return __error("Adjustment-layer template does not exist; nothing was added.");
+            try {
+              app.project.importSequences(templateFile.fsName, ["${templateId}"]);
+              importedTemplate = true;
+            } catch (importError) { return __error("Template import threw: " + importError.toString(), { outcome: "committed_unverified", verified: false, timelineChanged: false }); }
+            if (!app.project.activeSequence || String(app.project.activeSequence.sequenceID) !== String(seq.sequenceID)) {
+              app.project.activeSequence = seq;
+            }
+            if (!app.project.activeSequence || String(app.project.activeSequence.sequenceID) !== String(seq.sequenceID)) return __error("Cannot restore target sequence after template import; no layer was placed.", { outcome: "committed_unverified", verified: false });
+            source = __findAdjustmentSource("${templateId}");
+            if (!source) return __error("Imported template contains no verified adjustment-layer TrackItem. No timeline insertion attempted.", { outcome: "committed_unverified", verified: false, timelineChanged: false });
+          }
+          if (source) {
+            var oldIn = source.getInPoint(1), oldOut = source.getOutPoint(1);
+            var zero = new Time(); zero.seconds = 0;
+            var layerOut = new Time(); layerOut.seconds = ${duration};
+            try {
+              source.setInPoint(0, 1);
+              source.setOutPoint(${duration}, 1);
+              domTrack.overwriteClip(source, String(playerTicks));
+            } catch (placeError) { return __error("Adjustment-layer placement threw: " + placeError.toString(), { outcome: "committed_unverified", verified: false }); }
+            finally { try { source.setInPoint(oldIn.seconds, 1); source.setOutPoint(oldOut.seconds, 1); } catch (restoreError) { return __error("Adjustment-layer placement attempted, but source marks could not be restored: " + restoreError.toString(), { outcome: "committed_unverified", verified: false }); } }
+            var placed = __layerAtPlayhead(String(source.nodeId));
+            if (!placed) return __error("Placement returned without a verified adjustment layer. Inspect before retrying.", { outcome: "committed_unverified", verified: false });
+            var actualEnd = parseFloat(placed.end.ticks);
+            if (Math.abs(actualEnd - playerTicks - durationTicks) > frameTicks / 100) return __error("Adjustment layer exists but duration readback differs. Inspect before retrying.", { outcome: "committed_unverified", verified: false, nodeId: String(placed.nodeId) });
+            return __result({ added: true, verified: true, method: "verified-source + public overwriteClip", importedTemplate: importedTemplate, trackIndex: ${track}, nodeId: String(placed.nodeId), projectItemId: String(source.nodeId), startSeconds: playerTicks / TICKS_PER_SECOND, durationSeconds: ${duration} });
+          }
+
+          app.enableQE();
+          var qeSeq = qe.project.getActiveSequence();
+          if (!qeSeq) return __error("No active QE sequence and no reusable adjustment layer or template source.");
+          // Path 1: optional host-dependent QE creation.
           if (typeof qeSeq.addAdjustmentLayer === "function") {
             try { qeSeq.addAdjustmentLayer(${track}); } catch (eLegacy) { return __error("Adjustment layer creation was attempted and threw: " + eLegacy.toString() + ". Inspect before retrying.", { outcome: "failed", mutationAttempted: true, mutationOutcome: "unknown", verified: false, timelineChanged: null }); }
             if (!__layerAtPlayhead(null)) {
@@ -488,7 +569,7 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
           // Path 2 (PPro 2026): create a project-level adjustment layer, then
           // insert it at the playhead. The new item is found by node ID, not by
           // name, so an older adjustment layer in the project is never used.
-          if (!qe.project.newAdjustmentLayer) return __error("No supported adjustment-layer API found in this Premiere version (Premiere 25.2.3 has neither qeSeq.addAdjustmentLayer nor qe.project.newAdjustmentLayer).");
+          if (!qe.project.newAdjustmentLayer) return __error("This host has no adjustment-layer creation API and the open project has no reusable adjustment layer. Supply template_project_path and template_sequence_id for a real adjustment-layer template. No UI fallback was attempted.");
           var qeTrack = qeSeq.getVideoTrackAt(${track});
           if (!qeTrack) return __error("QE video track ${track} not found; nothing was added.");
           var insertMethod = typeof qeTrack.insert === "function" ? "insert" : (typeof qeTrack.insertClip === "function" ? "insertClip" : null);

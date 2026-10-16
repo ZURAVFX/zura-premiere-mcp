@@ -1,7 +1,7 @@
 {
   "name": "zura-premiere-mcp",
   "mcpName": "io.github.zuravfx/zura-premiere",
-  "version": "1.25.0",
+  "version": "1.25.1",
   "description": "Zura's local-first MCP for verified Adobe Premiere Pro editing workflows, with a local CEP connector and optional authenticated UXP support.",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,8 @@
     "zura-premiere-mcp": "dist/index.js"
   },
   "files": [
+    "dist/resources/adjustment-layer-template.xml",
+    "docs/adjustment-layers.md",
     "dist/**/*.js",
     "dist/**/*.d.ts",
     "dist/resources/adobe-uxp-coverage.json",

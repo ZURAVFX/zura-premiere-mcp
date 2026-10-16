@@ -36,7 +36,7 @@ operation” when the tool has no enum-based mode.
 
 | MCP tool | Availability | Actions or modes | Description |
 | --- | --- | --- | --- |
-| `add_adjustment_layer` | Default profile | Single operation | EXPERIMENTAL (QE DOM): add an adjustment layer at the playhead on the specified track. Refuses when the host lacks the QE APIs; verifies a new public TrackItem using isAdjustmentLayer and placement readback. |
+| `add_adjustment_layer` | Default profile | Single operation | Add an adjustment layer at the playhead. Reuse a verified adjustment-layer source or automatically import the bundled media-free native template into the open project, then use public overwriteClip. Legacy QE creation is host-dependent. Refuses occupied placement and never opens UI. Read back layer type and timing. |
 | `add_audio_keyframes` | Default profile | Single operation | Add audio level keyframes to create fades or level changes |
 | `add_custom_metadata_field` | Default profile | Single operation | Add a custom metadata field to the project's metadata schema. This creates a schema/column definition only; it does not set a per-item value. Use set_metadata field_name/value or complete Project Metadata XML with readback to update a value. |
 | `add_keyframe` | Default profile | Single operation | Add and read back a keyframe on an effect property. The receipt warns when its time is outside the clip's visible range. This verifies stored parameter data only; render/playback verification remains host-dependent. |

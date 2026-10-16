@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const resources = [
+  "adjustment-layer-template.xml",
   "adobe-uxp-coverage.json",
   "adobe-api-inventory.json",
   "adobe-beta-aaf-export-options-drift.json",
