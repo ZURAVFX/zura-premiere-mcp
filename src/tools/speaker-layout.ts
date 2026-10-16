@@ -1,3 +1,4 @@
+import { getFramingReviewTools } from "./framing-review.js";
 import { MAX_SPEAKER_REGIONS, MAX_FRAME_DIMENSION, planActiveSpeakerReframe, planSpeakerCheckerboard } from "../ai/speaker-layout.js";
 import { WORD_TIMELINE_PARAMETER } from "../ai/word-timeline.js";
 import { planCenteredShotFraming } from "../ai/shot-framing.js";
@@ -29,6 +30,7 @@ function wrap(plan: (args: Record<string, unknown>) => unknown) {
 
 export function getSpeakerLayoutTools() {
   return {
+    ...getFramingReviewTools(),
     plan_centered_shot_framing: {
       description: "Plan centered static Motion framing for up to 100 measured shots. Keeps centers at (0.5, 0.5) and flags impossible fits instead of offsetting subjects. Local-only; never changes Premiere or inspects pixels. Verify a rendered pilot before batching.",
       parameters: {
