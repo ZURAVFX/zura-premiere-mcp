@@ -46,6 +46,8 @@ export function planCenteredShotFraming(args: Record<string, unknown>) {
     const scalePercent = round(scale / prescale * 100);
     const supportedScale = scalePercent > 0 && scalePercent <= 10000;
     const warnings = [];
+    const effectiveEnlargement = round(scale);
+    if (effectiveEnlargement > 1) warnings.push("This crop enlarges source pixels. Review actual face detail at 100% before applying; prefer a wider composition or a closer source camera if soft. Source dimensions alone cannot establish real detail after earlier upscaling or compression.");
     if (!fits) warnings.push("This source cannot keep the entire measured region centered while filling the target. Choose a tighter face/upper-body region, another shot, or ask for a different layout; do not silently offset the subject.");
     if (!supportedScale) warnings.push("This crop exceeds the supported Motion Scale range. Verify the region and source prescale, or choose another shot; do not apply this plan.");
     return {
@@ -57,7 +59,10 @@ export function planCenteredShotFraming(args: Record<string, unknown>) {
       position_normalized: { x: round(position.x / target.width), y: round(position.y / target.height) },
       subject_center_normalized: { x: 0.5, y: 0.5 },
       region_fits: fits,
-      requires_review: !fits || !supportedScale,
+      output_pixels_per_source_pixel: effectiveEnlargement,
+      quality_review_required: effectiveEnlargement > 1,
+      quality_verified: false,
+      requires_review: !fits || !supportedScale || effectiveEnlargement > 1,
       warnings,
     };
   });

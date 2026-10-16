@@ -16,6 +16,7 @@ export function planSlowHorizontalCorrection(a:any){
  for(const c of a.corrections){
   const start=finite(c.start_seconds,'start_seconds',0,duration),end=finite(c.end_seconds,'end_seconds',0,duration);
   const target=finite(c.target_x,'target_x',-100000,100000);
+  if(start<1/fps)throw Error('Establish the opening crop with initial_x. A correction cannot drift into place on the first frame.');
   if(end<=start||start<previousEnd||typeof c.reason!=='string'||!c.reason.trim())throw Error('Corrections must be ordered, non-overlapping and have a measured movement reason.');
   const peak=1.875*Math.abs(target-from)/(end-start);
   if(peak>speed)throw Error(`Correction exceeds speed limit: ${peak.toFixed(2)} px/s. Extend its duration or reduce its distance.`);

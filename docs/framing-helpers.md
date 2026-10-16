@@ -17,3 +17,9 @@ Declare samples as settled or temporary-drift. Only slow-rare mode permits tempo
 ## Installation scope
 
 These helpers run locally in the installed MCP server. The CEP panel remains the connection interface; adding helper tools does not require expanding its UI. Existing running MCP sessions need to reconnect after installing a release containing the tools.
+
+## Opening crop and source quality
+
+Establish the intended composition with the initial X on the first visible frame. The correction planner refuses a correction starting before the second frame; later movement still needs an evidence-based reason and visual review. This guard cannot infer whether a declared movement is necessary.
+
+`plan_centered_shot_framing` reports output pixels per source pixel, flags source enlargement for quality review and leaves quality unverified. Inspect exported face detail at 100%; dimensions and geometry cannot detect low focus, compression or a previously upscaled source. Prefer wider framing or a useful closer source camera when a wide crop looks soft.
