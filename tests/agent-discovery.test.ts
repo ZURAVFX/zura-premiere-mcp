@@ -119,10 +119,10 @@ describe("agent guidance over MCP", () => {
       await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
       const tools = (await client.listTools()).tools;
       const names = new Set(tools.map((tool) => tool.name));
-      expect(tools.length).toBeLessThanOrEqual(60);
+      expect(tools.length).toBeLessThanOrEqual(62);
       for (const name of ["add_audio_keyframes", "plan_word_mute_ranges", "plan_pause_tightening", "add_transition"]) expect(names.has(name), name).toBe(true);
-      for (const name of ["import_media", "create_subclip", "create_sequence_from_clips", "get_sequence_presets", "set_sequence_settings", "plan_centered_shot_framing", "set_static_clip_framing_batch", "import_image_sequence", "get_footage_interpretation", "set_override_frame_rate", "overwrite_clip", "remove_from_timeline", "get_encoder_presets", "export_sequence", "verify_delivery_file", "start_batch_encode"]) expect(names.has(name), name).toBe(true);
-      for (const name of ["auto_reframe_sequence", "consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(names.has(name), name).toBe(false);
+      for (const name of ["import_media", "create_subclip", "create_sequence_from_clips", "get_sequence_presets", "set_sequence_settings", "plan_centered_shot_framing", "set_static_clip_framing_batch", "import_image_sequence", "get_footage_interpretation", "set_override_frame_rate", "overwrite_clip", "remove_from_timeline", "get_encoder_presets", "export_sequence", "verify_delivery_file", "start_batch_encode", "auto_reframe_sequence", "set_effect_property"]) expect(names.has(name), name).toBe(true);
+      for (const name of ["consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(names.has(name), name).toBe(false);
       expect(client.getInstructions()).toContain("30-minute deadline");
       expect(client.getInstructions()).toContain("plan_centered_shot_framing -> set_static_clip_framing_batch -> capture_frame");
     } finally { await client.close(); await server.close(); }

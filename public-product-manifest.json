@@ -11,7 +11,7 @@
     "mcpName": "io.github.zuravfx/zura-premiere",
     "localPackage": "zura-premiere-mcp",
     "distribution": "public_source_repository",
-    "version": "1.24.3",
+    "version": "1.25.0",
     "repository": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "homepage": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "license": "MIT",

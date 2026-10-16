@@ -1,6 +1,14 @@
+## [1.25.0] - 2026-10-16
+
+- Expose native Auto Reframe in the compact Reels tool pack for explicitly requested tracking, with Slower Motion guidance and rendered-review requirements.
+- Keep static framing as the default. Remove the unreleased custom tracking-panel experiment after a native/custom export comparison favoured native Slower Motion. No additional tracking dependencies are installed.
+- Clarify that Auto Reframe sequence creation does not prove analysis completion, performer identity or visual quality.
+
+
 ## 1.24.2
 
 - Bound source scene detection to the requested input range and discard out-of-range events before merging nearby cuts. Verified against a real camera cut and regression tests.
+
 
 ## 1.24.1
 

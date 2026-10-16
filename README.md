@@ -97,3 +97,9 @@ The `scripts/build-zura-source-bundle.ps1` script creates the source archive use
 - MCP server name: `io.github.zuravfx/zura-premiere`
 - GitHub source: [ZURAVFX/zura-premiere-mcp](https://github.com/ZURAVFX/zura-premiere-mcp)
 - Licence: MIT, with upstream attribution in [UPSTREAM.md](UPSTREAM.md)
+
+## Native subject reframing
+
+Premiere already includes Auto Reframe. For requested smooth talking-head tracking, use its **Slower Motion** preset on a new sequence and review the actual export. The compact Reels MCP pack now exposes `auto_reframe_sequence`. Static framing remains the default; there is no additional tracking extension or Python/model installation. The existing MCP connection panel is still installed by the normal setup.
+
+Auto Reframe cannot promise an exact horizontal-only dead zone or perfectly centred moving faces. Keep one performer per continuous shot, preserve original sequences, and reject unwanted drift or subject switches. A measured static Reframe Offset can correct composition; verify its units and the actual export. Never manipulate opaque generated-path properties. See [the native/custom comparison and workflow](docs/native-reframing.md).

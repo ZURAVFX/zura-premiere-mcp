@@ -50,7 +50,7 @@ export const WORKFLOW_TOOL_PACKS: readonly WorkflowToolPack[] = [
   {
     name: "reels",
     title: "Centered local reels",
-    description: "Focused CEP reel assembly, transcript intake, static shot framing, image-sequence overlays, batch encoding and verified delivery. Excludes animated Auto Reframe, unsafe scripting and media consolidation.",
+    description: "Focused CEP reel assembly, transcript intake, static shot framing, opt-in native Slower Motion reframing, image-sequence overlays, batch encoding and verified delivery. Excludes unsafe scripting and media consolidation.",
     tools: [
       "verify_premiere_connection", "get_project_info", "list_project_items", "find_project_item_by_name", "get_item_info",
       "list_sequences", "get_active_sequence", "get_sequence_settings", "get_sequence_structure", "get_clip_properties",
@@ -58,7 +58,7 @@ export const WORKFLOW_TOOL_PACKS: readonly WorkflowToolPack[] = [
       "add_audio_keyframes", "plan_word_mute_ranges", "plan_pause_tightening", "add_transition",
       "create_subclip", "create_sequence_from_clips", "create_sequence", "get_sequence_presets", "set_sequence_settings", "duplicate_sequence",
       "add_to_timeline", "overwrite_clip", "remove_from_timeline", "trim_clip", "split_clip", "add_track", "import_image_sequence", "set_override_frame_rate", "plan_centered_shot_framing",
-      "set_static_clip_framing_batch", "set_clip_position_path_batch", "remove_effect",
+      "set_static_clip_framing_batch", "set_clip_position_path_batch", "auto_reframe_sequence", "set_effect_property", "remove_effect",
       "capture_frame", "export_frame", "export_sequence_review_frames", "export_sequence_clip_review_frames",
       "detect_source_scene_changes", "rank_short_form_candidates", "get_clip_transcript_uxp", "search_clip_transcript_uxp",
       "validate_project_for_export", "validate_export_preset", "get_encoder_presets", "export_sequence", "add_to_render_queue", "start_batch_encode",

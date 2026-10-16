@@ -484,7 +484,7 @@ export function getSequenceTools(bridgeOptions: BridgeOptions) {
     },
 
     auto_reframe_sequence: {
-      description: "Auto-reframe a sequence into a new sequence of target_width x target_height. Premiere derives the new sequence from the source height (a 1080p source at 9:16 comes out 607x1080), so the tool then sets the requested frame size and verifies it; the Auto Reframe effect refits to the new size. Its generated path can animate independently of ordinary Motion Position readback. If a workflow requires stable framing, use native Motion controls and verify each clip rather than relying on the generated path.",
+      description: "Auto-reframe a sequence into a new sequence of target_width x target_height. Premiere derives the new sequence from the source height (a 1080p source at 9:16 comes out 607x1080), so the tool then sets the requested frame size and verifies it; the Auto Reframe effect refits to the new size. For explicitly requested talking-head tracking, trial motion_preset slower on a clean source-shot sequence. Static framing remains the default. This verifies sequence creation and dimensions only, not asynchronous analysis completion or visual quality. Activate the returned sequence explicitly and inspect an actual export. The generated path can animate independently of ordinary Motion; never rewrite its opaque internals. It does not guarantee horizontal-only motion, a dead zone, exact centering or a speed limit. If a workflow requires a fixed crop, use static native Motion controls.",
       parameters: {
         type: "object" as const,
         properties: {
@@ -580,6 +580,9 @@ export function getSequenceTools(bridgeOptions: BridgeOptions) {
             height: targetHeight,
             premiereFrameSize: premiereWidth + "x" + premiereHeight,
             resizedToRequest: resized,
+            analysisCompletionVerified: false,
+            visualReviewRequired: true,
+            verificationScope: "Sequence creation and dimensions only; activate this sequence and review an actual export after analysis.",
             verified: true
           });
         `);
