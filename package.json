@@ -216,13 +216,13 @@
   "dependencies": {
     "@modelcontextprotocol/node": "^2.1.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@posthog/core": "1.56.1",
-    "@posthog/types": "1.413.0",
-    "acorn": "^8.15.0",
-    "jose": "^6.2.10",
-    "posthog-node": "5.55.0",
+    "@posthog/core": "1.59.3",
+    "@posthog/types": "1.416.0",
+    "acorn": "^8.19.0",
+    "jose": "^6.2.13",
+    "posthog-node": "5.56.4",
     "ws": "^8.22.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@adobe/cc-ext-uxp-types": "7.3.1",
@@ -230,10 +230,10 @@
     "@adobe/premierepro": "26.3.0",
     "@adobe/premierepro-beta": "npm:@adobe/premierepro@26.5.0-beta.73",
     "@modelcontextprotocol/client": "^2.2.0",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.5",
     "@types/ws": "^8.18.1",
-    "@typescript-eslint/parser": "^8.71.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@typescript-eslint/parser": "^8.72.0",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
