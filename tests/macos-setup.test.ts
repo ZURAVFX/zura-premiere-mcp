@@ -130,18 +130,19 @@ describe.skipIf(!bash)("macOS source setup", () => {
     const commands = setup.commands();
     expect(commands.map(call => [call.command, call.args[0]])).toEqual([
       ["npm", "ci"], ["npm", "run"], ["npm", "install"],
-      ["node", expect.any(String)], ["node", expect.any(String)], ["codex", "mcp"],
+      ["node", expect.any(String)], ["node", expect.any(String)], ["node", expect.any(String)], ["codex", "mcp"],
     ]);
     expect(commands[1].args).toEqual(["run", "build"]);
     expect(commands[2].args.slice(0, 3)).toEqual(["install", "--global", "--prefix"]);
     expect(resolve(commands[2].args[3])).toBe(setup.prefix);
     expect(commands[2].args[4]).toBe("--install-links");
     expect(resolve(commands[2].args[5])).toBe(setup.checkout);
-    expect(commands[3].args[1]).toBe("--install-cep");
-    expect(commands[4].args[1]).toBe("--diagnose-cep");
-    expect(commands[5].args.slice(0, 4)).toEqual(["mcp", "add", "zura-premiere-mcp", "--"]);
-    expect(resolve(commands[5].args[4])).toBe(join(setup.bin, "node"));
-    expect(resolve(commands[5].args[5])).toBe(setup.entrypoint);
+    expect(commands[3].args[1]).toBe("--setup");
+    expect(commands[4].args[1]).toBe("--install-cep");
+    expect(commands[5].args[1]).toBe("--diagnose-cep");
+    expect(commands[6].args.slice(0, 4)).toEqual(["mcp", "add", "zura-premiere-mcp", "--"]);
+    expect(resolve(commands[6].args[4])).toBe(join(setup.bin, "node"));
+    expect(resolve(commands[6].args[5])).toBe(setup.entrypoint);
     expect(readFileSync(join(setup.prefix, "source-root.txt"), "utf8").trim()).toBe(shellPath(setup.checkout));
     const runtime = JSON.parse(readFileSync(join(setup.prefix, "runtime.json"), "utf8"));
     expect(resolve(runtime.entrypoint)).toBe(setup.entrypoint);
