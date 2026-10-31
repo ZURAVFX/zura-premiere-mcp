@@ -116,6 +116,7 @@ const INSPECT_TOOL_NAMES = new Set([
 // changes nothing in Premiere, so classifying it as "edit" would overstate what
 // it does; filesystem is the authority it actually needs.
 const FILESYSTEM_TOOL_NAMES = new Set([
+  "render_person_matte",
   "preview_mogrt_recipe",
   "verify_mogrt_artifact",
   "apply_lut",

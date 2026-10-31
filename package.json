@@ -1,7 +1,7 @@
 {
   "name": "zura-premiere-mcp",
   "mcpName": "io.github.zuravfx/zura-premiere",
-  "version": "1.25.1",
+  "version": "1.26.0",
   "description": "Zura's local-first MCP for verified Adobe Premiere Pro editing workflows, with a local CEP connector and optional authenticated UXP support.",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +10,8 @@
     "zura-premiere-mcp": "dist/index.js"
   },
   "files": [
+    "scripts/matte-runtime.mjs",
+    "docs/person-matte.md",
     "dist/resources/adjustment-layer-template.xml",
     "docs/adjustment-layers.md",
     "dist/**/*.js",
@@ -219,7 +221,10 @@
     "@posthog/core": "1.56.1",
     "@posthog/types": "1.413.0",
     "acorn": "^8.15.0",
+    "ffmpeg-static": "^5.3.0",
     "jose": "^6.2.10",
+    "onnxruntime-node": "^1.23.2",
+    "pngjs": "^7.0.0",
     "posthog-node": "5.55.0",
     "ws": "^8.22.0",
     "zod": "^4.4.3"
@@ -248,4 +253,3 @@
     "js-yaml": "^4.3.2"
   }
 }
-

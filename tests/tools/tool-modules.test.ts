@@ -1,3 +1,4 @@
+import { getPersonMatteTools } from '../../src/tools/person-matte.js';
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getHelpersSource } from "../../src/bridge/script-builder.js";
 import { BridgeOptions } from "../../src/bridge/file-bridge.js";
@@ -105,7 +106,8 @@ const ALL_MODULES: Array<{
   { name: "playhead", getter: getPlayheadTools, minTools: 4 },
   { name: "metadata", getter: getMetadataTools, minTools: 6 },
   { name: "export", getter: getExportTools, minTools: 10 },
-  { name: "media-analysis", getter: getMediaAnalysisTools, minTools: 5 },
+  { name: "person-matte", getter: getPersonMatteTools, minTools: 1 },
+    { name: "media-analysis", getter: getMediaAnalysisTools, minTools: 5 },
   { name: "interchange-analysis", getter: getInterchangeAnalysisTools, minTools: 5 },
   { name: "advanced", getter: getAdvancedTools, minTools: 20 },
   { name: "keyframes", getter: getKeyframeTools, minTools: 5 },
@@ -232,11 +234,11 @@ describe("Total Tool Count", () => {
     for (const mod of ALL_MODULES) {
       total += Object.keys(mod.getter(bridgeOptions)).length;
     }
-    expect(total).toBe(385);
+    expect(total).toBe(388);
   });
 
-  it("there are 54 directly enumerated modules", () => {
-    expect(ALL_MODULES.length).toBe(54);
+  it("there are 55 directly enumerated modules", () => {
+    expect(ALL_MODULES.length).toBe(55);
   });
 });
 

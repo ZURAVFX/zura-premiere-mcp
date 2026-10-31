@@ -11,7 +11,7 @@
     "mcpName": "io.github.zuravfx/zura-premiere",
     "localPackage": "zura-premiere-mcp",
     "distribution": "public_source_repository",
-    "version": "1.25.1",
+    "version": "1.26.0",
     "repository": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "homepage": "https://github.com/ZURAVFX/zura-premiere-mcp",
     "license": "MIT",
@@ -28,11 +28,11 @@
     ]
   },
   "capabilitySurface": {
-    "registeredCoreTools": 397,
-    "defaultProfileTools": 395,
+    "registeredCoreTools": 400,
+    "defaultProfileTools": 398,
     "authenticatedUxpAdditions": 96,
-    "defaultProfileWithUxp": 491,
-    "toolModules": 60,
+    "defaultProfileWithUxp": 494,
+    "toolModules": 61,
     "guidedWorkflows": 24
   },
   "workflows": [

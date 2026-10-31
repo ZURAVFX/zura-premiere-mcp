@@ -453,11 +453,13 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
         const preflight = await sendCommand(buildToolScript(`
           var s = app.project.activeSequence;
           if (!s) return __error("No active sequence");
+          if (${track} >= s.videoTracks.numTracks) return __error("Video track index out of range");
           var settings = s.getSettings();
           return __result({ sequenceId: String(s.sequenceID), width: Number(settings.videoFrameWidth), height: Number(settings.videoFrameHeight), frameTicks: Number(s.timebase) });
         `), bridgeOptions);
         if (!preflight.success) return preflight;
         const target = preflight.data as { sequenceId: string; width: number; height: number; frameTicks: number };
+        if (!target || typeof target.sequenceId !== "string" || !Number.isFinite(target.width) || !Number.isFinite(target.height) || !Number.isFinite(target.frameTicks)) return { success: false, error: "Invalid sequence settings readback; nothing was changed." };
         let template: { path: string; sequenceId: string };
         try { template = args.template_project_path
           ? { path: args.template_project_path, sequenceId: args.template_sequence_id! }

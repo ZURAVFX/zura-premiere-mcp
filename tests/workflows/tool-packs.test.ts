@@ -8,7 +8,7 @@ import {
 describe("workflow tool packs", () => {
   it("provides focused reels with opt-in native reframing but no unsafe scripting or media copying", () => {
     const selection = resolveToolPacks("reels", "explicit");
-    for (const name of ["import_image_sequence", "plan_centered_shot_framing", "set_static_clip_framing_batch", "start_batch_encode", "verify_delivery_file", "auto_reframe_sequence", "set_effect_property"]) expect(isToolInSelectedPacks(name, selection)).toBe(true);
+    for (const name of ["color_correct", "copy_effects_between_clips", "import_image_sequence", "plan_centered_shot_framing", "set_static_clip_framing_batch", "start_batch_encode", "verify_delivery_file", "auto_reframe_sequence", "set_effect_property"]) expect(isToolInSelectedPacks(name, selection)).toBe(true);
     for (const name of ["consolidate_and_transfer", "execute_extendscript", "plan_active_speaker_reframe"]) expect(isToolInSelectedPacks(name, selection)).toBe(false);
   });
   it("keeps the backwards-compatible full catalog when unconfigured", () => {

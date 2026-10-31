@@ -7,7 +7,7 @@ import { getEffectsTools } from "../../src/tools/effects.js";
 const send = vi.mocked(sendCommand);
 const tool = getEffectsTools({ tempDir: "/tmp/color-correct", timeoutMs: 5000 }).color_correct;
 function collection<T>(values: T[]) { return Object.assign(values, { numItems: values.length }); }
-function host(options: { missingCatalog?: boolean; ignoreAdd?: boolean; existing?: boolean; ignoredWrite?: boolean; localized?: boolean; throwAfterAdd?: boolean; duplicateSaturation?: boolean; sectionedSaturation?: boolean; missingBasicCorrection?: boolean } = {}) {
+function host(options: { missingCatalog?: boolean; ignoreAdd?: boolean; existing?: boolean; ignoredWrite?: boolean; localized?: boolean; throwAfterAdd?: boolean; duplicateSaturation?: boolean; sectionedSaturation?: boolean; missingBasicCorrection?: boolean; noQe?: boolean } = {}) {
   let value = 0;
   const property = { displayName: options.localized ? "Exposición" : "Exposure", setValue: vi.fn((next: number) => { if (!options.ignoredWrite) value = next; }), getValue: () => value };
   let firstSaturationValue = 100;
@@ -26,12 +26,16 @@ function host(options: { missingCatalog?: boolean; ignoreAdd?: boolean; existing
   const add = vi.fn(() => { if (!options.ignoreAdd) { components.push(lumetri); components.numItems = components.length; } if (options.throwAfterAdd) throw Error("partial add"); });
   const qeClip = { type: "Clip", name: "Video", start: { ticks: "0" }, addVideoEffect: add };
   const qeProject = { getActiveSequence: () => ({ getVideoTrackAt: () => ({ numItems: 1, getItemAt: () => qeClip }) }), getVideoEffectList: () => collection([{ name: options.missingCatalog ? "Other" : "Lumetri Color" }]), getVideoEffectByName: (name: string) => ({ name }) };
-  const app = { enableQE: vi.fn(), project: { activeSequence: { videoTracks: { numTracks: 1, 0: { clips: collection([clip]) } }, audioTracks: { numTracks: 0 } } } };
+  const app = { enableQE: vi.fn(() => { if (options.noQe) throw Error("QE unavailable"); }), project: { activeSequence: { videoTracks: { numTracks: 1, 0: { clips: collection([clip]) } }, audioTracks: { numTracks: 0 } } } };
   send.mockImplementation(async (script) => JSON.parse(String(runInNewContext(`${getHelpersSource()}\n${script}`, { app, qe: { project: qeProject } }))));
   return { add, property, saturation, secondSaturation, lumetri };
 }
 beforeEach(() => vi.resetAllMocks());
 describe("color_correct verified receipts (#720)", () => {
+  it("updates existing Lumetri without requiring QE", async () => {
+    host({ existing: true, noQe: true });
+    await expect(tool.handler({ node_id: "c1", exposure: 0.5 })).resolves.toMatchObject({ success: true, data: { verified: true } });
+  });
   it("requires at least one value before sending a command", async () => {
     await expect(tool.handler({ node_id: "c1" })).resolves.toMatchObject({ success: false });
     expect(send).not.toHaveBeenCalled();

@@ -57,6 +57,7 @@ export const WORKFLOW_TOOL_PACKS: readonly WorkflowToolPack[] = [
       "get_effect_properties", "get_footage_interpretation", "save_project_as", "save_project", "set_active_sequence", "import_media",
       "add_adjustment_layer", "set_playhead_position", "apply_effect", "add_keyframe", "get_keyframes", "get_clip_adjustment_layer",
       "add_audio_keyframes", "plan_word_mute_ranges", "plan_pause_tightening", "add_transition",
+      "render_person_matte", "color_correct", "copy_effects_between_clips", "set_sequence_in_out_points",
       "create_subclip", "create_sequence_from_clips", "create_sequence", "get_sequence_presets", "set_sequence_settings", "duplicate_sequence",
       "add_to_timeline", "overwrite_clip", "remove_from_timeline", "trim_clip", "split_clip", "add_track", "import_image_sequence", "set_override_frame_rate", "plan_centered_shot_framing",
       "verify_head_centering", "plan_slow_horizontal_correction", "set_static_clip_framing_batch", "set_clip_position_path_batch", "auto_reframe_sequence", "set_effect_property", "remove_effect",

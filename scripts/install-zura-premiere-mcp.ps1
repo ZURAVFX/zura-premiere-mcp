@@ -174,6 +174,9 @@ try {
 } finally { Pop-Location }
 $env:PATH = $nodeDirectory + [System.IO.Path]::PathSeparator + $normalPath
 
+& $node.Source (Join-Path $repoRoot "scripts\matte-runtime.mjs") --setup
+Require-NativeSuccess "Preparing local person matting"
+
 $mcpCommand = Get-Command zura-premiere-mcp.cmd -ErrorAction SilentlyContinue
 if (-not $mcpCommand) { $mcpCommand = Get-Command zura-premiere-mcp -ErrorAction SilentlyContinue }
 if (-not $mcpCommand) { throw "The installed zura-premiere-mcp command was not found on PATH." }

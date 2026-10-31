@@ -11,6 +11,7 @@ vi.mock("../../src/bridge/file-bridge.js", () => ({
 }));
 
 import { sendCommand } from "../../src/bridge/file-bridge.js";
+vi.mock("../../src/bridge/adjustment-template.js", () => ({ prepareAdjustmentTemplate: () => ({path:"",sequenceId:""}) }));
 import { getUtilityTools } from "../../src/tools/utility.js";
 
 const mockedSendCommand = vi.mocked(sendCommand);
@@ -94,6 +95,7 @@ describe("move_playhead_to_edit reads the playhead back", () => {
     let player = 26 * TICKS;
     const clip = (start: number, end: number) => ({ start: { ticks: String(start * TICKS) }, end: { ticks: String(end * TICKS) } });
     const seq = {
+      sequenceID: "test-sequence", timebase: String(TICKS / 30), getSettings: () => ({videoFrameWidth:1080,videoFrameHeight:1920}),
       videoTracks: { numTracks: 1, 0: { clips: { numItems: 2, 0: clip(25, 35), 1: clip(40, 46) } } },
       audioTracks: { numTracks: 0 },
       getPlayerPosition: () => ({ ticks: String(player) }),
@@ -146,17 +148,18 @@ describe("add_adjustment_layer", () => {
     const trackClips: Record<string, any>[] = [];
     const playerTicks = 10 * TICKS;
     const seq = {
-      videoTracks: { numTracks: 2, 0: { clips: children(trackClips) }, 1: { clips: children([]) } },
+      sequenceID: "test-sequence", timebase: String(TICKS / 30), getSettings: () => ({videoFrameWidth:1080,videoFrameHeight:1920}),
+      videoTracks: { numTracks: 2, 0: { clips: children(trackClips), isLocked: () => false }, 1: { clips: children([]), isLocked: () => false } },
       getPlayerPosition: () => ({ ticks: String(playerTicks) }),
     };
     const place = (item: Record<string, any>) => { if (!options.placeNothing) trackClips.push({ nodeId: `clip-${trackClips.length}`, start: { ticks: String(playerTicks) }, projectItem: item, isAdjustmentLayer: () => !options.ordinaryLayer }); };
-    if (options.existingLayer) place(root[0]);
+    if (options.existingLayer) { place(root[0]); trackClips[0].start={ticks:"0"}; trackClips[0].end={ticks:String(TICKS)}; }
     const fallback = vi.fn();
     const qeSeq: Record<string, any> = { getVideoTrackAt: () => ({ insert: (item: Record<string, any>) => { place(item); if (options.throwAfterInsert) throw new Error("after mutation"); }, insertClip: fallback }) };
     if (options.legacy) qeSeq.addAdjustmentLayer = () => { place({ nodeId: "legacy", name: "Capa" }); if (options.throwLegacy) throw new Error("after mutation"); };
     const qeProject: Record<string, any> = { getActiveSequence: () => qeSeq };
     if (options.modern) qeProject.newAdjustmentLayer = () => { root.push({ nodeId: "fresh", name: "Adjustment Layer", type: 1 }); };
-    useContext({ app: { enableQE: () => {}, project: { activeSequence: seq, rootItem: { children: children(root) } } }, qe: { project: qeProject } });
+    useContext({ app: { enableQE: () => {}, project: { activeSequence: seq, sequences:{numSequences:0}, rootItem: { children: children(root) } } }, qe: { project: qeProject } });
     return { fallback, trackClips };
   }
 
@@ -179,7 +182,7 @@ describe("add_adjustment_layer", () => {
 
   it("refuses cleanly when neither QE API exists (Premiere 25.2.3)", async () => {
     adjustmentHost();
-    await expect(run(tools.add_adjustment_layer, {})).resolves.toMatchObject({ success: false, error: expect.stringContaining("No supported adjustment-layer API") });
+    await expect(run(tools.add_adjustment_layer, {})).resolves.toMatchObject({ success: false, error: expect.stringContaining("no adjustment-layer creation API") });
   });
 
   it("places the newly created item, never an older adjustment layer, and verifies it", async () => {
