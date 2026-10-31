@@ -239,7 +239,7 @@
     "@types/ws": "^8.18.1",
     "@typescript-eslint/parser": "^8.71.0",
     "@vitest/coverage-v8": "^4.1.11",
-    "eslint": "^9.39.3",
+    "eslint": "^10.13.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   },
