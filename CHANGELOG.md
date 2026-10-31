@@ -1,3 +1,7 @@
+## [1.26.0-rc.1] - 2026-10-31
+
+Prerelease: integrated local person matting, automatic runtime/model preparation, Reels finishing controls and Zura Talking Head workflow. Windows clean-install and inference smoke tests passed. Wider repository gate remains red; not promoted to stable.
+
 ## [1.25.1] - 2026-10-16
 
 - Automatically create native adjustment layers from a bundled media-free template when the open project has no reusable source. Import into the open project, refuse occupied ranges, and verify layer type and timing.

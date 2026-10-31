@@ -3,7 +3,7 @@
   "manifest_version": "0.4",
   "name": "zura-premiere-mcp",
   "display_name": "Zura Premiere MCP",
-  "version": "1.25.1",
+  "version": "1.26.0-rc.1",
   "description": "Inspect and edit local Adobe Premiere Pro projects through the Zura Premiere MCP.",
   "long_description": "Inspect projects, assemble and modify timelines, manage media, effects, audio and captions, and export deliverables through a local bridge to Adobe Premiere Pro.",
   "author": {
