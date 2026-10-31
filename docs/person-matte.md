@@ -10,6 +10,6 @@ Process each continuous webcam shot separately. Recurrent state is preserved ins
 
 Development evidence: 120 frames of 600x402 webcam footage processed in 4.56 seconds on CPU. A 30-frame sequence imported into live Premiere at verified 60 FPS. One composited frame was visually inspected. This is not evidence of full-shot temporal quality, GPU performance or arbitrary-subject selection. The model is designed for people, not arbitrary objects. Review hair, hands, microphones and motion before delivery.
 
-Next product work: cancellable background jobs, persistent cache keyed by media/trim/model, cut-aware reset, long-shot review and native layer placement. The current bounded operation is a tested development route, not a production-ready replacement for every rotoscoping workflow.
+Next product work: cancellable background jobs, persistent cache keyed by media/trim/model, cut-aware reset, long-shot review and native layer placement. The bounded operation supports person cutouts; review hair, microphone edges and motion before delivery. It is not an arbitrary-object rotoscoping tool.
 
 Integrated Node runtime validation on Windows: automatic model preparation, cached reuse and 30-frame inference through the built MCP handler passed (1.79 seconds inference/write). Package contents include the runtime. macOS native dependency installation remains unverified on a Mac.

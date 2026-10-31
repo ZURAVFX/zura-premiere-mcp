@@ -48,7 +48,7 @@ describe("getSpeakerLayoutTools", () => {
   const tools = getSpeakerLayoutTools();
 
   it("exposes the three plan tools with local-only descriptions", () => {
-    expect(Object.keys(tools).sort()).toEqual(["plan_active_speaker_reframe", "plan_centered_shot_framing", "plan_speaker_checkerboard"]);
+    expect(Object.keys(tools).sort()).toEqual(["plan_active_speaker_reframe", "plan_centered_shot_framing", "plan_slow_horizontal_correction", "plan_speaker_checkerboard", "verify_head_centering"]);
     for (const tool of Object.values(tools)) {
       expect(tool.description.length).toBeLessThan(400);
       expect(tool.description).toMatch(/Local-only; never changes Premiere/);

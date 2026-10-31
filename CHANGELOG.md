@@ -1,3 +1,7 @@
+## [1.26.0] - 2026-10-31
+
+Integrated local person matting with automatic model/runtime preparation. Reels includes Lumetri, effect copying and export-range controls. Fixed framing schema validation, adjustment-layer preflight and current API regression fixtures.
+
 ## [1.26.0-rc.1] - 2026-10-31
 
 Prerelease: integrated local person matting, automatic runtime/model preparation, Reels finishing controls and Zura Talking Head workflow. Windows clean-install and inference smoke tests passed. Wider repository gate remains red; not promoted to stable.

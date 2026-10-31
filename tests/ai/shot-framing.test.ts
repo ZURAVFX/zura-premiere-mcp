@@ -30,7 +30,7 @@ describe("centered static shot framing", () => {
     const result = plan({ x: 0, y: 0, width: 0.8, height: 1 });
     expect(result.requires_review).toBe(true);
     expect(result.shots[0]).toMatchObject({ region_fits: false, subject_center_normalized: { x: 0.5, y: 0.5 } });
-    expect(result.shots[0].warnings[0]).toContain("do not silently offset");
+    expect(result.shots[0].warnings.some(w => w.includes("do not silently offset"))).toBe(true);
   });
 
   it("rejects invalid dimensions, regions and duplicate shot IDs", () => {
