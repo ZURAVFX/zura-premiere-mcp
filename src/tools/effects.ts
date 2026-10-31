@@ -374,10 +374,6 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
 
         // First apply Lumetri Color effect, then set its properties
         const script = buildToolScript(`
-          app.enableQE();
-          var qeSeq = qe.project.getActiveSequence();
-          if (!qeSeq) return __error("No active sequence (QE)");
-          
           var result = __findClip("${escapeForExtendScript(args.node_id)}");
           if (!result) return __error("Clip not found");
           
@@ -396,6 +392,9 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
           var qeAttempted = false;
           var qeAddError = "";
           if (!hasLumetri) {
+            app.enableQE();
+            var qeSeq = qe.project.getActiveSequence();
+            if (!qeSeq) return __error("No active sequence (QE)");
             var qeTrack = qeSeq.getVideoTrackAt(result.trackIndex);
             // QE track items include gaps, so the DOM clip index is not a QE index.
             var qeClip = __findQeClipByDomClip(qeTrack, clip);

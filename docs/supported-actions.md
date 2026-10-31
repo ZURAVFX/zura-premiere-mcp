@@ -10,11 +10,11 @@ source catalog may include unreleased actions.
 
 | Surface | Count | Availability |
 | --- | ---: | --- |
-| Registered core actions | 397 | CEP/local server catalog; host and authority checks still apply |
-| Default-profile core actions | 395 | Advertised with `inspect,edit,export,filesystem` |
+| Registered core actions | 400 | CEP/local server catalog; host and authority checks still apply |
+| Default-profile core actions | 398 | Advertised with `inspect,edit,export,filesystem` |
 | Restricted core actions | 2 | Require explicit `unsafe-script` authority |
 | Authenticated UXP additions | 96 | Advertised only while a compatible authenticated UXP panel is connected |
-| Default profile with UXP | 491 | 395 core plus 96 UXP tools |
+| Default profile with UXP | 494 | 398 core plus 96 UXP tools |
 
 ## How to read support
 
@@ -287,6 +287,7 @@ operation” when the tool has no enum-based mode.
 | `plan_short_subscribe_cta` | Default profile | `brand`: `watch_club`, `cafe`, `other`; `platform`: `tiktok`, `instagram_reels`, `youtube_shorts`, `instagram_feed`, `youtube`, `linkedin`, `x` | Plan a brief subscribe overlay about two-thirds through a Short, after an optional hook, in a platform-safe lower-third. Local-only; never changes Premiere. |
 | `plan_shot_match` | Default profile | Single operation | Compare two bounded local-media frame samples and return measured waveform/parade/saturation deltas plus coarse correction directions. Read-only planning only; it does not grade Premiere or claim that primaries alone can match the shots. |
 | `plan_silence_review_markers` | Default profile | Single operation | Create a bounded, non-mutating review plan that maps FFmpeg-detected source-media silences onto one known 1x timeline placement. It clips candidates to the supplied source in/out span, redacts the source path, and never adds markers, cuts clips, or changes Premiere. |
+| `plan_slow_horizontal_correction` | Default profile | Single operation | Plan bounded, quintic eased horizontal-only Motion corrections for one measured continuous shot/subject. Holds between corrections; rejects excessive speed. Pure local computation, no detection or host changes. |
 | `plan_speaker_checkerboard` | Default profile | Single operation | Plan a speaker checkerboard (each speaker's turns on their own video/audio track) from a caller-supplied word timeline. Returns frame-snapped segments, split points, track assignments, and the add_track/razor_all_tracks/move_clip_to_track routes. Local-only; never changes Premiere. |
 | `plan_word_mute_ranges` | Default profile | `mode`: `mute`, `bleep` | Plan mute or bleep ranges for listed words/phrases in a word timeline. Returns redacted, frame-snapped mute ranges, ready-to-apply audio keyframes and (for bleep) tone placements. Local-only; never changes Premiere. |
 | `play_source_monitor` | Default profile | Single operation | Request playback of the clip in the Source Monitor. Fails when no clip is loaded. The legacy API does not provide a same-call position readback, so movement is not reported as verified. |
@@ -324,6 +325,7 @@ operation” when the tool has no enum-based mode.
 | `rename_clip` | Default profile | Single operation | Rename a clip on the timeline and verify the new name. |
 | `rename_project_item` | Default profile | Single operation | Rename a project item in the project panel. |
 | `rename_track` | Default profile | `track_type`: `video`, `audio` | Rename a video or audio track. |
+| `render_person_matte` | Default profile | Single operation | Generate a local recurrent person cutout as straight-alpha PNG frames using the bundled Node runtime and automatically downloaded checksum-verified RVM model. No Adobe UI or ComfyUI. Does not alter Premiere. Import the returned first_frame with import_image_sequence at the returned fps. Review hair and motion before use. Existing output directories are refused. |
 | `replace_clip` | Default profile | Single operation | Replace one timeline clip with a different project item on the same track, keeping the exact timeline start and end. The replacement plays from its own In mark for the original clip's duration; neighbouring clips do not ripple, and a linked partner clip on another track is left in place. The replacement must carry only the track's media type (for example a still or video-only item on a video track): Premiere's overwrite would also place an item's other media on another track. Checks the replacement accepts the source range before removing anything. Refuses without changing anything when the track is locked. Reads the track back: verified when the new clip covers the same span, committed_unverified when the span holds but the source In point cannot be confirmed, otherwise failure with Undo guidance. |
 | `replace_clip_media` | Default profile | Single operation | Unavailable by design: the legacy ExtendScript overwrite route cannot prove that replacing media preserves the original clip's trim, position, linked audio, or adjacent clips, so this tool performs no mutation. |
 | `reverse_clip` | Default profile | Single operation | Unavailable: Premiere does not expose a supported scripting API for reversing a timeline clip's playback direction. |
@@ -429,6 +431,7 @@ operation” when the tool has no enum-based mode.
 | `verify_delivery_conformance` | Default profile | Single operation | Verify a local exported file against an explicit delivery contract using ffprobe and optional EBU R128 analysis. Returns pass, fail, or not_evaluated per check; it does not prove Premiere render lineage or visual approval. |
 | `verify_delivery_file` | Default profile | `checksum_algorithm`: `sha256`, `sha512` | Verify that an exported delivery is a non-empty regular file and calculate a SHA-256 or SHA-512 checksum; optionally compare expected size and checksum |
 | `verify_fcpxml_media_references` | Default profile | Single operation | Verify the file:// media references of an FCPXML or FCP7 XML (xmeml) document, only inside caller-approved existing roots. References outside those roots are never statted or exposed as local paths. |
+| `verify_head_centering` | Default profile | `mode`: `static`, `slow-rare` | Measure horizontal head-centre error from supplied full-head boxes in exported pixels. Separates settled targets and declared slow-rare temporary drift. Never claims to detect heads or approve unseen footage. |
 | `verify_mogrt_artifact` | Default profile | Single operation | Verify that a workspace-contained .mogrt artifact exists locally and has a ZIP header. This does not prove controls, import compatibility, playback, or visual correctness. |
 | `verify_premiere_connection` | Default profile | `backend`: `cep`, `uxp` | Run a safe, read-only first-run check. It proves that this MCP server, the selected Premiere bridge, an active project, and an active sequence are connected without returning project names, paths, or media details. |
 | `evaluate_expression` | Requires `unsafe-script` | Single operation | Evaluate a simple ExtendScript expression and return its value. Use for quick queries like checking a property, getting a count, or reading state. The expression should be a single value/call — NOT a full script. Examples: - "app.project.name" → project name - "app.project.activeSequence.name" → active sequence name - "app.project.rootItem.children.numItems" → number of root items - "app.project.activeSequence.videoTracks.numTracks" → number of video tracks - "app.version" → Premiere Pro version |

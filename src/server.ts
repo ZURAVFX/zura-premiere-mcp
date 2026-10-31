@@ -1,3 +1,4 @@
+import { getPersonMatteTools } from './tools/person-matte.js';
 import {
   fromJsonSchema,
   McpServer,
@@ -293,6 +294,7 @@ function collectStaticTools(
     ...getMetadataTools(bridgeOptions),
     ...getExportTools(bridgeOptions),
     ...getMediaAnalysisTools(bridgeOptions),
+    ...getPersonMatteTools(),
     ...getInterchangeAnalysisTools(bridgeOptions),
     ...getAdvancedTools(bridgeOptions),
     ...getKeyframeTools(bridgeOptions),

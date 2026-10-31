@@ -82,6 +82,8 @@ if [[ ! -f "$SERVER_ENTRYPOINT" ]]; then
   echo "The installed MCP entrypoint was not found: $SERVER_ENTRYPOINT" >&2
   exit 1
 fi
+"$NODE_EXECUTABLE" "$PROJECT_DIR/scripts/matte-runtime.mjs" --setup
+
 echo "[4/5] Installing and checking the Premiere panel..."
 "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT" --install-cep
 "$NODE_EXECUTABLE" "$SERVER_ENTRYPOINT" --diagnose-cep
