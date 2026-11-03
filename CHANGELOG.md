@@ -1,3 +1,7 @@
+## [1.27.1] - 2026-11-03
+
+- Fix Windows panel installation with long inherited PATH values: deduplicate nested setup paths and call the verified Node executable directly.
+
 ## [1.27.0] - 2026-11-03
 
 - Select exact repeated effect instances for CEP property and keyframe reads/writes; refuse ambiguous or stale selectors.

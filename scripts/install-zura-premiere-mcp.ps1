@@ -7,7 +7,9 @@ $ErrorActionPreference = "Stop"
 # Prefer this host's built-in modules when launched from PowerShell 7 or an IDE.
 $env:PSModulePath = "$PSHOME\Modules;$env:PSModulePath"
 $setupStarted = Get-Date
-$env:PATH = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User") + ";" + $env:PATH
+# Nested setup shells may already include machine/user PATH. Avoid multiplying it.
+$sessionPathEntries = ([Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User") + ";" + $env:PATH) -split ';'
+$env:PATH = ($sessionPathEntries | Where-Object { $_ } | Select-Object -Unique) -join ';'
 Write-Host "[1/5] Checking the local bundled source and prerequisites..."
 
 function Require-NativeSuccess([string]$Action) {
@@ -181,7 +183,8 @@ $mcpCommand = Get-Command zura-premiere-mcp.cmd -ErrorAction SilentlyContinue
 if (-not $mcpCommand) { $mcpCommand = Get-Command zura-premiere-mcp -ErrorAction SilentlyContinue }
 if (-not $mcpCommand) { throw "The installed zura-premiere-mcp command was not found on PATH." }
 Write-Host "[4/5] Installing the Premiere panel..."
-& $mcpCommand.Source --install-cep
+# Use the verified executable directly: npm's cmd shim can lose PATH above 8191 characters.
+& $node.Source (Join-Path $repoRoot "dist\index.js") --install-cep
 Require-NativeSuccess "Installing the Premiere CEP connector"
 
 $codex = Get-Command codex.cmd -ErrorAction SilentlyContinue
