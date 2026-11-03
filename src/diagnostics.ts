@@ -342,7 +342,9 @@ export function buildFirstRunReport(
           boundary: "connected",
           state: "needs_attention",
           message: "Premiere Pro did not answer the safe connection check.",
-          repair: "In Premiere Pro, open Window > Extensions > Zura Premiere MCP and make sure it says Running. Close any open Premiere dialog, then try again.",
+          repair: backend === "uxp"
+            ? "Configure the optional authenticated UXP bridge, open Window > UXP Plugins > Zura Advanced Bridge, and connect it using the matching local bridge token. Keep the token private. The CEP panel does not establish a UXP connection."
+            : "In Premiere Pro, open Window > Extensions > Zura Premiere MCP and make sure it says Running. Close any open Premiere dialog, then try again.",
         },
         {
           id: "active_project",
@@ -362,7 +364,9 @@ export function buildFirstRunReport(
         },
       ],
       nextStep: "Reconnect the Premiere Connector, then run this safe check again.",
-      repair: "If the Zura panel still does not respond, run get_capabilities to compare the selected bridge directory with the panel, then run zura-premiere-mcp --diagnose-cep and follow its repair guidance.",
+      repair: backend === "uxp"
+        ? "Read uxp-plugin/README.md for the authenticated loopback setup. Verify the UXP panel and MCP process use matching connection settings; do not reinstall the CEP panel to repair UXP."
+        : "If the Zura panel still does not respond, run get_capabilities to compare the selected bridge directory with the panel, then run zura-premiere-mcp --diagnose-cep and follow its repair guidance.",
     };
   }
 

@@ -1,3 +1,13 @@
+## [1.28.0] - 2026-11-03
+
+- Add a source updater that preserves working checkouts, verifies the remote commit and routes OA-managed installs through the complete private integration updater. Add a concise shared install prompt and public landing page.
+
+- Add native numeric-vector keyframes for Motion Position, Anchor Point and other matching vector properties, with dimension checks and complete value readback.
+- Verify final-key removal on hosts that return an undefined animated list by corroborating independent key searches. Add explicit all-key removal with native animation disabled.
+- Select an exact Lumetri instance in color_correct and refuse animated requested controls before static changes.
+- Expose project open/close in the reels pack, handle an empty project shell, and give UXP-specific connection repair guidance.
+- Live Windows Premiere 26.1.1 checks include rendered Linear/Hold/Bezier differences, Lumetri Basic/Creative/Vignette controls and animated exposure. Captions excluded by request.
+
 ## [1.27.1] - 2026-11-03
 
 - Fix Windows panel installation with long inherited PATH values: deduplicate nested setup paths and call the verified Node executable directly.

@@ -10,7 +10,7 @@ export function getDiscoveryTools(bridgeOptions: BridgeOptions) {
       handler: async () => {
         const script = buildToolScript(`
           var project = app.project;
-          if (!project) return __error("No project is open");
+          if (!project || !project.rootItem || !project.sequences) return __error("No project is open");
           
           var info = {
             name: project.name,

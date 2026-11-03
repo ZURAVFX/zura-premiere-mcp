@@ -1,8 +1,48 @@
 #!/usr/bin/env node
 
-const action = process.argv.includes("--check") ? "check" : "update";
-console.log("Zura Premiere MCP source and releases are maintained at https://github.com/ZURAVFX/zura-premiere-mcp.");
-console.log(action === "check"
-  ? "Review the latest GitHub release, then rerun INSTALL-ZURA-PREMIERE-MCP.ps1 if an update is available."
-  : "Pull the latest source and rerun INSTALL-ZURA-PREMIERE-MCP.ps1 to update the local MCP and Premiere panel.");
-console.log("This command does not contact GitHub or make changes automatically.");
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { pathToFileURL } from 'node:url';
+
+function execute(command, args, capture = false) {
+  if (command === 'codex' && process.platform === 'win32') {
+    const script = `& (Get-Command codex.cmd -ErrorAction Stop).Source @(${args.map(a => `'${a.replace(/'/g, "''")}'`).join(',')}); exit $LASTEXITCODE`;
+    command = 'powershell.exe';
+    args = ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
+  }
+  const r = spawnSync(command, args, { windowsHide: true, ...(capture ? { encoding: 'utf8', timeout: 60000 } : { stdio: 'inherit' }) });
+  if (r.error || r.status !== 0) throw Error(`${command} failed: ${r.error?.message || r.status}. No automatic retry performed.`);
+  return r.stdout?.trim() || '';
+}
+
+export function updateSource({ check = false, run = execute, home = homedir(), mkdir = mkdirSync, exists = existsSync } = {}) {
+  const plugins = JSON.parse(run('codex', ['plugin', 'list', '--json'], true));
+  const oa = plugins.installed?.find(p => p.pluginId === 'zura-premiere-reels@oa-motion-software');
+  if (oa) {
+    if (!oa.enabled) throw Error('Enable the OA Zura Premiere Reels plugin before updating its managed MCP.');
+    const updater = join(oa.source.path, 'scripts', 'update-zura-premiere-reels.mjs');
+    if (!exists(updater)) throw Error('This OA plugin predates the complete updater. Follow its current private GitHub setup instructions once; do not replace its pinned MCP with a standalone build.');
+    if (check) { console.log('OA-managed installation: use the Zura Premiere Reels update skill to verify the latest complete private release.'); return; }
+    run(process.execPath, [updater]); return;
+  }
+  const repository = 'https://github.com/ZURAVFX/zura-premiere-mcp.git';
+  const head = run('git', ['ls-remote', repository, 'refs/heads/main'], true).split(/\s/)[0];
+  if (!/^[a-f0-9]{40}$/.test(head)) throw Error('Could not verify latest Zura source commit.');
+  if (check) { console.log(`Latest public Zura source: ${head}`); return; }
+  const parent = join(home, '.zura', 'premiere-mcp-sources');
+  const source = join(parent, head);
+  mkdir(parent, { recursive: true });
+  if (!exists(source)) run('git', ['clone', '--depth', '1', '--branch', 'main', repository, source]);
+  if (run('git', ['-C', source, 'rev-parse', 'HEAD'], true) !== head) throw Error('Main changed during download. No installation was performed; rerun once.');
+  if (run('git', ['-C', source, 'status', '--porcelain'], true)) throw Error('The versioned source folder has local changes. Preserve them before updating.');
+  run(process.execPath, [join(source, 'INSTALL-ZURA-PREMIERE-MCP.mjs')]);
+  if (run('git', ['ls-remote', repository, 'refs/heads/main'], true).split(/\s/)[0] !== head) throw Error('Installed the verified source, but main changed during setup. Rerun to receive the newer release.');
+  console.log(`Installed Zura public source ${head}. No apps restarted. Follow the installer restart instructions.`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  try { updateSource({ check: process.argv.includes('--check') }); }
+  catch (error) { console.error(error.message); process.exitCode = 1; }
+}

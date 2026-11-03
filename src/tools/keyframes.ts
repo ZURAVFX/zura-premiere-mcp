@@ -11,8 +11,10 @@ function keyframeArgumentError(args: Record<string, unknown>, timeNames: string[
       return `${name} must be a finite, non-negative number of seconds from the clip's start.`;
     }
   }
-  if (valueName && (typeof args[valueName] !== "number" || !Number.isFinite(args[valueName]))) {
-    return `${valueName} must be a finite number.`;
+  if (valueName) {
+    const value = args[valueName];
+    const valid = typeof value === "number" ? Number.isFinite(value) : Array.isArray(value) && value.length >= 2 && value.length <= 4 && value.every(item => typeof item === "number" && Number.isFinite(item));
+    if (!valid) return `${valueName} must be a finite number or a numeric vector of 2 to 4 finite values.`;
   }
   return null;
 }
@@ -342,10 +344,14 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           // Without a usable time base (speed change, reverse) only media time is reported.
           var keyBase = __clipKeyframeBase(clip);
           var keys = prop.getKeys();
+          if (!__isEmptyKeyList(prop, keys) && (!keys || typeof keys.length !== "number" || !isFinite(keys.length) || keys.length < 0 || Math.floor(keys.length) !== keys.length)) {
+            return __error("Premiere returned an unreadable key list; no empty-list success is assumed.", { isTimeVarying: isTimeVarying, keyListType: typeof keys, keyListSentinel: keys === undefined ? "undefined" : (keys === null ? "null" : String(keys)) });
+          }
           var keyframes = [];
           if (keys) {
             for (var k = 0; k < keys.length; k++) {
               var time = keys[k];
+              if (!time || !isFinite(parseFloat(time.ticks))) return __error("Premiere returned an unreadable key time; no partial key list is reported.");
               var val = null;
               try { val = prop.getValueAtKey(time); } catch(e) {}
               keyframes.push({
@@ -393,8 +399,8 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             description: `${CLIP_TIME} where to add the keyframe`,
           },
           value: {
-            type: "number",
-            description: "Value at the keyframe",
+            type: ["number", "array"], items: { type: "number" }, minItems: 2, maxItems: 4,
+            description: "Scalar or numeric vector in the property's native units. Motion Position and Anchor Point use normalised coordinates such as [0.5, 0.5], not pixels. Colours are unsupported.",
           },
         },
         required: ["node_id", "effect_name", "property_name", "time_seconds", "value"],
@@ -405,7 +411,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         property_name: string;
         property_index?: number;
         time_seconds: number;
-        value: number;
+        value: number | number[];
       }) => {
         const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
@@ -434,6 +440,17 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           } catch(eSupports) {}
           ${keyBaseScript([["time_seconds", args.time_seconds]])}
 
+          var time = __clipKeyTime(keyBase, ${args.time_seconds});
+          var requestedKeyValue = ${JSON.stringify(args.value)};
+          function __isKeyVector(value) { return value instanceof Array || Object.prototype.toString.call(value) === "[object Array]"; }
+          var requestedVector = __isKeyVector(requestedKeyValue);
+          var currentKeyValue;
+          try { currentKeyValue = prop.getValueAtTime(time); } catch (currentValueError) {}
+          if (currentKeyValue === undefined || currentKeyValue === null) { try { currentKeyValue = prop.getValue(); } catch (staticValueError) {} }
+          var currentVector = __isKeyVector(currentKeyValue);
+          if (requestedVector && (!currentVector || currentKeyValue.length !== requestedKeyValue.length)) return __error("Keyframe vector dimensions do not match the readable property; nothing was changed.");
+          if (!requestedVector && currentVector) return __error("This property requires a vector value; nothing was changed.");
+
           // Enable keyframes if not already
           try {
             if (!prop.isTimeVarying()) {
@@ -441,18 +458,18 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             }
           } catch(e) {}
 
-          var time = __clipKeyTime(keyBase, ${args.time_seconds});
           prop.addKey(time);
-          prop.setValueAtKey(time, ${args.value}, true);
+          prop.setValueAtKey(time, requestedKeyValue, true);
           var readBack = null;
           try { readBack = prop.getValueAtKey(time); } catch(eReadBack) {}
-          if (readBack === null || readBack === undefined) {
-            return __error("Premiere did not return the keyframe value after writing it; storage is not reported as verified.");
+          var valueMatches = requestedVector ? (__isKeyVector(readBack) && readBack.length === requestedKeyValue.length) : (typeof readBack === "number" && isFinite(readBack) && Math.abs(readBack - requestedKeyValue) <= 0.0001);
+          if (requestedVector && valueMatches) {
+            for (var valueIndex = 0; valueIndex < requestedKeyValue.length; valueIndex++) {
+              if (typeof readBack[valueIndex] !== "number" || !isFinite(readBack[valueIndex]) || Math.abs(readBack[valueIndex] - requestedKeyValue[valueIndex]) > 0.0001) valueMatches = false;
+            }
           }
-          if (typeof readBack === "number" && Math.abs(readBack - ${args.value}) > 0.0001) {
-            return __error("Premiere returned " + readBack + " after writing keyframe value ${args.value}; storage is not reported as verified.");
-          }
-          
+          if (!valueMatches) return __error("Premiere did not read back the requested keyframe value; inspect before retrying.", { outcome: "committed_unverified", verified: false, requestedValue: requestedKeyValue, readBackValue: readBack });
+
           return __result({
             added: true,
             stored: true,
@@ -462,7 +479,9 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             property: "${escapeForExtendScript(args.property_name)}",
             time: ${args.time_seconds},
             mediaSeconds: __ticksToSeconds(time.ticks),
-            value: ${args.value},
+            effectIndex: effectIndex,
+            propertyIndex: resolvedProperty.index,
+            value: requestedKeyValue,
             readBackValue: readBack,
             keyframesOutsideVisibleRange: outsideVisibleRange === null ? null : (outsideVisibleRange ? 1 : 0),
             warning: outsideVisibleRange === true
@@ -559,6 +578,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             description: "Display name of the property",
           },
           property_index: propertyIndexParameter(),
+          disable_animation: { type: "boolean", description: "After removing ALL stored keys, turn off the native animation stopwatch. Refuses before mutation if any key lies outside the requested range. Defaults to false." },
           start_seconds: {
             type: "number",
             description: `Start of the range: ${CLIP_TIME.toLowerCase()}`,
@@ -575,6 +595,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         effect_name: string; effect_index?: number;
         property_name: string;
         property_index?: number;
+        disable_animation?: boolean;
         start_seconds: number;
         end_seconds: number;
       }) => {
@@ -595,7 +616,8 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             }
             return found;
           }
-          var inRange = __keysInRange();
+          var inRange = __keysInRange(true);
+          if (${args.disable_animation === true} && inRange.length !== __clipKeySeconds(keyBase, prop, true).length) return __error("disable_animation requires a range containing every stored key; nothing was changed.");
           if (!inRange.length) {
             return __error("No keyframes between ${args.start_seconds}s and ${args.end_seconds}s; keys are at [" + __clipKeySeconds(keyBase, prop).join(", ") + "]s from the clip's start. Nothing was changed.");
           }
@@ -603,6 +625,10 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           for (var r = 0; r < inRange.length; r++) {
             var key = __findKeyNear(prop, __clipKeyTime(keyBase, inRange[r]));
             if (key) { removedStoredKeys.push(key); prop.removeKey(key); }
+          }
+          if (${args.disable_animation === true}) {
+            try { prop.setTimeVarying(false); if (prop.isTimeVarying() !== false) throw new Error("Animation remains enabled"); }
+            catch (disableError) { return __error("Keys were removed but animation could not be disabled; inspect before retrying.", { outcome: "committed_unverified", verified: false }); }
           }
           var left = null;
           var remaining = null;
@@ -621,6 +647,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             removed: true,
             verified: true,
             removedCount: inRange.length,
+            animationDisabled: ${args.disable_animation === true},
             removedKeys: inRange,
             effect: "${escapeForExtendScript(args.effect_name)}",
             property: "${escapeForExtendScript(args.property_name)}",

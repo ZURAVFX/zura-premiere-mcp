@@ -300,7 +300,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
     },
 
     color_correct: {
-      description: "Apply basic color correction through experimental QE Lumetri insertion. Requires Lumetri component and requested property readback; rendered output is not verified.",
+      description: "Apply basic color correction through experimental QE Lumetri insertion. Select repeated Lumetri instances with effect_index; refuses animated requested controls before writing. Requires component and property readback; rendered output is not verified.",
       parameters: {
         type: "object" as const,
         properties: {
@@ -308,6 +308,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: { type: "integer", minimum: 0, description: "Exact Lumetri component index from list_clip_effects. Required when multiple Lumetri effects exist. An explicit selector never inserts another effect." },
           exposure: { type: "number", description: "Exposure adjustment (-4.0 to 4.0)" },
           contrast: { type: "number", description: "Contrast adjustment (-100 to 100)" },
           highlights: { type: "number", description: "Highlights adjustment (-100 to 100)" },
@@ -322,6 +323,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
       },
       handler: async (args: {
         node_id: string;
+        effect_index?: number;
         exposure?: number;
         contrast?: number;
         highlights?: number;
@@ -332,6 +334,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
         tint?: number;
         saturation?: number;
       }) => {
+        if (args.effect_index !== undefined && (!Number.isSafeInteger(args.effect_index) || args.effect_index < 0)) return { success: false, error: "effect_index must be a non-negative safe integer." };
         // Resolve color_correct controls only within Lumetri Basic Correction.
         const controls: Array<{ key: string; label: string; value: number }> = (
           [
@@ -381,13 +384,19 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
           var clip = result.clip;
           var hasLumetri = false;
           var lumetri = null;
+          var effectIndex = ${args.effect_index === undefined ? "null" : args.effect_index};
+          var lumetriIndices = [];
           for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === "Lumetri Color") {
-              hasLumetri = true;
-              lumetri = clip.components[i];
-              break;
-            }
+            if (clip.components[i].displayName === "Lumetri Color" || clip.components[i].matchName === "AE.ADBE Lumetri") lumetriIndices.push(i);
           }
+          if (effectIndex !== null) {
+            if (effectIndex >= clip.components.numItems || (clip.components[effectIndex].displayName !== "Lumetri Color" && clip.components[effectIndex].matchName !== "AE.ADBE Lumetri")) return __error("effect_index does not identify Lumetri Color; nothing was changed.");
+            lumetri = clip.components[effectIndex];
+          } else {
+            if (lumetriIndices.length > 1) return __error("Multiple Lumetri effects found at indices [" + lumetriIndices.join(", ") + "]; supply effect_index. Nothing was changed.");
+            if (lumetriIndices.length === 1) { effectIndex = lumetriIndices[0]; lumetri = clip.components[effectIndex]; }
+          }
+          hasLumetri = !!lumetri;
 
           var qeAttempted = false;
           var qeAddError = "";
@@ -413,7 +422,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
             qeAttempted = true;
             try { qeClip.addVideoEffect(qeEffect); } catch (eAdd) { qeAddError = String(eAdd); }
             for (var li = 0; li < clip.components.numItems; li++) {
-              if (clip.components[li].displayName === "Lumetri Color") { lumetri = clip.components[li]; break; }
+              if (clip.components[li].displayName === "Lumetri Color") { effectIndex = li; lumetri = clip.components[li]; break; }
             }
             if (!lumetri) {
               return __jsonStringify({ success: false,
@@ -445,6 +454,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
           }
           var ambiguousControls = [];
           var missingControls = [];
+          var animatedControls = [];
           for (var controlIndex = 0; controlIndex < ${controls.length}; controlIndex++) {
             var control = [${controls.map((c) => `"${c.label}"`).join(",")}][controlIndex];
             var candidateIndices = [];
@@ -453,12 +463,18 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
             }
             if (candidateIndices.length > 1) ambiguousControls.push(control + " at property indices [" + candidateIndices.join(", ") + "]");
             else if (candidateIndices.length === 0) missingControls.push(control);
+            else {
+              var candidate = lumetri.properties[candidateIndices[0]];
+              try { if (typeof candidate.isTimeVarying === "function" && candidate.isTimeVarying()) animatedControls.push(control); }
+              catch (animationError) { animatedControls.push(control + " (animation state unreadable)"); }
+            }
           }
-          if (ambiguousControls.length || missingControls.length) {
+          if (ambiguousControls.length || missingControls.length || animatedControls.length) {
             return __jsonStringify({ success: false,
-              error: (ambiguousControls.length ? "Lumetri property names are ambiguous: " + ambiguousControls.join("; ") + ". " : "") +
+              error: (animatedControls.length ? "Animated Lumetri controls require time-specific keyframe tools: " + animatedControls.join(", ") + ". " : "") +
+                (ambiguousControls.length ? "Lumetri property names are ambiguous: " + ambiguousControls.join("; ") + ". " : "") +
                 (missingControls.length ? "Lumetri Basic Correction properties were not found: " + missingControls.join(", ") + ". " : "") +
-                "Use set_effect_property with property_index from get_effect_properties.",
+                (animatedControls.length ? "Use add_keyframe at a specific time, or explicitly clear all keys with remove_keyframe_range and disable_animation." : "Use set_effect_property with property_index from get_effect_properties."),
               data: { colorCorrected: false, verified: false, renderVerified: false, timelineChanged: qeAttempted, outcome: qeAttempted ? "committed_unverified" : "not_applied", errors: {}, changes: {} } });
           }
 
@@ -495,7 +511,7 @@ export function getEffectsTools(bridgeOptions: BridgeOptions) {
           }
           return __result({ colorCorrected: true, verified: true, renderVerified: false,
             verificationScope: "Lumetri component and property readback only; inspect rendered output before delivery.",
-            clipName: clip.name, changes: changes, errors: errors });
+            clipName: clip.name, effectIndex: effectIndex, changes: changes, errors: errors });
         `);
         return sendCommand(script, bridgeOptions);
       },

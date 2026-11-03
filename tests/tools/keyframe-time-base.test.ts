@@ -20,7 +20,7 @@ const ticks = (seconds: number) => String(Math.round(seconds * TICKS));
 
 beforeEach(() => vi.clearAllMocks());
 
-type HostOptions = { speed?: number; reversed?: boolean; speedReadError?: boolean; ignoreRemove?: boolean; failReadAfterRemove?: boolean; postKeys?: { value: unknown }; mediaKeys?: Array<[number, number]> };
+type HostOptions = { searchReadback?: boolean; speed?: number; reversed?: boolean; speedReadError?: boolean; ignoreRemove?: boolean; failReadAfterRemove?: boolean; postKeys?: { value: unknown }; mediaKeys?: Array<[number, number]> };
 
 /**
  * One clip on V1 at timeline 25-35s whose in-point is media 30s, as measured on
@@ -38,6 +38,11 @@ function host(options: HostOptions = {}) {
     areKeyframesSupported: () => true,
     isTimeVarying: () => timeVarying,
     setTimeVarying: (value: boolean) => { timeVarying = value; if (!value) keys.clear(); },
+    ...(options.searchReadback ? {
+      findNearestKey: (t: { ticks: string }, threshold: number) => { const at = Number(t.ticks); const k = sorted().find(k => Math.abs(k - at) <= threshold); return k === undefined ? undefined : time(k); },
+      findNextKey: (t: { ticks: string }) => { const k = sorted().find(k => k > Number(t.ticks)); return k === undefined ? undefined : time(k); },
+      findPreviousKey: (t: { ticks: string }) => { const k = sorted().reverse().find(k => k < Number(t.ticks)); return k === undefined ? undefined : time(k); },
+    } : {}),
     getKeys: () => { if (removed && options.failReadAfterRemove) throw new Error("getKeys failed"); if (removed && options.postKeys) return options.postKeys.value; return sorted().map(time); },
     addKey: (t: { ticks: string }) => { const k = Number(t.ticks); if (!keys.has(k)) keys.set(k, 100); },
     setValueAtKey: (t: { ticks: string }, value: number) => { keys.set(Number(t.ticks), value); },
@@ -240,7 +245,7 @@ describe("set_keyframe_interpolation", () => {
 describe("keyframe arguments are validated before a script is built", () => {
   it.each([
     ["add_keyframe", { time_seconds: Number.NaN, value: 1 }, "time_seconds must be a finite"],
-    ["add_keyframe", { time_seconds: 1, value: Number.POSITIVE_INFINITY }, "value must be a finite number."],
+    ["add_keyframe", { time_seconds: 1, value: Number.POSITIVE_INFINITY }, "value must be a finite number or a numeric vector"],
     ["add_keyframe", { time_seconds: -1, value: 1 }, "time_seconds must be a finite"],
     ["remove_keyframe", { time_seconds: "2" }, "time_seconds must be a finite"],
     ["remove_keyframe_range", { start_seconds: 0, end_seconds: Number.NaN }, "end_seconds must be a finite"],
@@ -250,5 +255,29 @@ describe("keyframe arguments are validated before a script is built", () => {
     const handler = (tools as unknown as Record<string, { handler: (args: unknown) => Promise<unknown> }>)[tool].handler;
     await expect(handler({ ...target, ...extra })).resolves.toMatchObject({ success: false, error: expect.stringContaining(message) });
     expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("empty native key lists and animation reset", () => {
+  it("corroborates Premiere's undefined animated list after the last key is removed", async () => {
+    host({ mediaKeys: [[32, 20]], postKeys: { value: undefined }, searchReadback: true });
+    await expect(tools.remove_keyframe.handler({ ...target, time_seconds: 2 })).resolves.toMatchObject({ success: true, data: { verified: true, remainingKeys: [] } });
+    await expect(tools.get_keyframes.handler(target)).resolves.toMatchObject({ success: true, data: { isTimeVarying: true, keyframes: [] } });
+  });
+  it("refuses an undefined list when independent searches still find a key", async () => {
+    host({ mediaKeys: [[32, 20]], ignoreRemove: true, postKeys: { value: undefined }, searchReadback: true });
+    await expect(tools.remove_keyframe.handler({ ...target, time_seconds: 2 })).resolves.toMatchObject({ success: false, data: { verified: false } });
+    await expect(tools.get_keyframes.handler(target)).resolves.toMatchObject({ success: false });
+  });
+  it("will not turn animation off when a stored key is outside the removal range", async () => {
+    const state = host({ mediaKeys: [[32, 20], [34, 80]] });
+    await expect(tools.remove_keyframe_range.handler({ ...target, start_seconds: 0, end_seconds: 3, disable_animation: true })).resolves.toMatchObject({ success: false });
+    expect(state.mediaKeys()).toEqual([[32, 20], [34, 80]]);
+  });
+  it("turns off the native stopwatch after explicitly clearing all keys", async () => {
+    host({ mediaKeys: [[32, 20], [34, 80]], postKeys: { value: undefined } });
+    await expect(tools.remove_keyframe_range.handler({ ...target, start_seconds: 0, end_seconds: 10, disable_animation: true })).resolves.toMatchObject({ success: true, data: { animationDisabled: true, remainingKeys: [] } });
+    await expect(tools.get_keyframes.handler(target)).resolves.toMatchObject({ success: true, data: { isTimeVarying: false } });
   });
 });

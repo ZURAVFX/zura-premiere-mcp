@@ -1575,14 +1575,22 @@ function __clipSecondsFromKey(base, time) {
 
 // A property with no keyframes reports getKeys() as 0 on some hosts and as
 // undefined on Premiere 25.2.3 (with isTimeVarying() false). Treat those as an
-// empty list only when the property readably is not time-varying; null and
-// other shapes stay unreadable.
+// empty list when animation is off or independent key searches corroborate
+// an empty animated property. Null and malformed lists stay unreadable.
 function __isEmptyKeyList(prop, keys) {
   if (keys === 0) return true;
   if (keys !== undefined) return false;
   var timeVarying = null;
   try { timeVarying = prop.isTimeVarying(); } catch (eTimeVarying) { return false; }
-  return timeVarying === false;
+  if (timeVarying === false) return true;
+  // Premiere 26.1.1 can keep the stopwatch enabled after its last key is removed.
+  // Corroborate its undefined list with independent searches around media zero.
+  // Missing methods, throws, nulls or any returned key remain unreadable/non-empty.
+  try {
+    if (typeof prop.findNearestKey !== "function" || typeof prop.findNextKey !== "function" || typeof prop.findPreviousKey !== "function") return false;
+    var origin = new Time(); origin.ticks = "0";
+    return prop.findNearestKey(origin, 1) === undefined && prop.findNextKey(origin) === undefined && prop.findPreviousKey(origin) === undefined;
+  } catch (emptyProbeError) { return false; }
 }
 
 // The stored key within 0.01s of a time, or null.

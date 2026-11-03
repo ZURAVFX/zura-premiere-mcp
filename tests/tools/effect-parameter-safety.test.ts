@@ -236,3 +236,33 @@ describe("exact effect instance selection", () => {
     expect(mockedSendCommand).not.toHaveBeenCalled();
   });
 });
+
+
+describe("native vector keyframes", () => {
+  const target = { node_id: "clip", effect_name: "Motion", property_name: "Position", time_seconds: 1 };
+  it("writes and verifies every vector component", async () => {
+    const prop = parameter("Position", { value: [0.5, 0.5] });
+    let stored: unknown = [0.5, 0.5];
+    Object.assign(prop, { setValueAtKey: vi.fn((_time: unknown, value: unknown) => { stored = value; }), getValueAtKey: () => stored });
+    host([prop], { displayName: "Motion", matchName: "AE.ADBE Motion" });
+    await expect(keyframes.add_keyframe.handler({ ...target, value: [0.6, 0.4] })).resolves.toMatchObject({ success: true, data: { value: [0.6, 0.4], readBackValue: [0.6, 0.4] } });
+  });
+  it("rejects vector dimension mismatches without enabling animation or adding keys", async () => {
+    const prop = parameter("Position", { value: [0.5, 0.5] });
+    host([prop], { displayName: "Motion", matchName: "AE.ADBE Motion" });
+    for (const value of [[1, 2, 3], 0.5]) {
+      await expect(keyframes.add_keyframe.handler({ ...target, value })).resolves.toMatchObject({ success: false });
+    }
+    expect(prop.addKey).not.toHaveBeenCalled();
+    expect(prop.setTimeVarying).not.toHaveBeenCalled();
+  });
+  it("does not certify a host that ignores the vector write", async () => {
+    const prop = parameter("Position", { value: [0.5, 0.5] });
+    host([prop], { displayName: "Motion", matchName: "AE.ADBE Motion" });
+    await expect(keyframes.add_keyframe.handler({ ...target, value: [0.6, 0.4] })).resolves.toMatchObject({ success: false, data: { outcome: "committed_unverified" } });
+  });
+  it("rejects nonfinite and oversized vectors before contacting Premiere", async () => {
+    for (const value of [[NaN, 1], [1, Infinity], [1], [1, 2, 3, 4, 5]]) await expect(keyframes.add_keyframe.handler({ ...target, value })).resolves.toMatchObject({ success: false });
+    expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+});

@@ -7,7 +7,7 @@ import { getEffectsTools } from "../../src/tools/effects.js";
 const send = vi.mocked(sendCommand);
 const tool = getEffectsTools({ tempDir: "/tmp/color-correct", timeoutMs: 5000 }).color_correct;
 function collection<T>(values: T[]) { return Object.assign(values, { numItems: values.length }); }
-function host(options: { missingCatalog?: boolean; ignoreAdd?: boolean; existing?: boolean; ignoredWrite?: boolean; localized?: boolean; throwAfterAdd?: boolean; duplicateSaturation?: boolean; sectionedSaturation?: boolean; missingBasicCorrection?: boolean; noQe?: boolean } = {}) {
+function host(options: { repeated?: boolean; animated?: boolean; missingCatalog?: boolean; ignoreAdd?: boolean; existing?: boolean; ignoredWrite?: boolean; localized?: boolean; throwAfterAdd?: boolean; duplicateSaturation?: boolean; sectionedSaturation?: boolean; missingBasicCorrection?: boolean; noQe?: boolean } = {}) {
   let value = 0;
   const property = { displayName: options.localized ? "Exposición" : "Exposure", setValue: vi.fn((next: number) => { if (!options.ignoredWrite) value = next; }), getValue: () => value };
   let firstSaturationValue = 100;
@@ -21,14 +21,18 @@ function host(options: { missingCatalog?: boolean; ignoreAdd?: boolean; existing
     ? sectionedProperties
     : [property, ...(options.duplicateSaturation ? [saturation, secondSaturation] : [])];
   const lumetri = { displayName: "Lumetri Color", properties: collection(lumetriProperties) };
-  const components = collection(options.existing ? [lumetri] : []);
+  let secondValue = 0;
+  const secondProperty = { displayName: "Exposure", setValue: vi.fn((next: number) => { secondValue = next; }), getValue: () => secondValue };
+  const secondLumetri = { displayName: "Lumetri Color", properties: collection([secondProperty]) };
+  if (options.animated) Object.assign(property, { isTimeVarying: () => true });
+  const components = collection(options.existing ? (options.repeated ? [lumetri, secondLumetri] : [lumetri]) : []);
   const clip = { nodeId: "c1", name: "Video", start: { ticks: "0" }, components };
   const add = vi.fn(() => { if (!options.ignoreAdd) { components.push(lumetri); components.numItems = components.length; } if (options.throwAfterAdd) throw Error("partial add"); });
   const qeClip = { type: "Clip", name: "Video", start: { ticks: "0" }, addVideoEffect: add };
   const qeProject = { getActiveSequence: () => ({ getVideoTrackAt: () => ({ numItems: 1, getItemAt: () => qeClip }) }), getVideoEffectList: () => collection([{ name: options.missingCatalog ? "Other" : "Lumetri Color" }]), getVideoEffectByName: (name: string) => ({ name }) };
   const app = { enableQE: vi.fn(() => { if (options.noQe) throw Error("QE unavailable"); }), project: { activeSequence: { videoTracks: { numTracks: 1, 0: { clips: collection([clip]) } }, audioTracks: { numTracks: 0 } } } };
   send.mockImplementation(async (script) => JSON.parse(String(runInNewContext(`${getHelpersSource()}\n${script}`, { app, qe: { project: qeProject } }))));
-  return { add, property, saturation, secondSaturation, lumetri };
+  return { add, property, secondProperty, saturation, secondSaturation, lumetri };
 }
 beforeEach(() => vi.resetAllMocks());
 describe("color_correct verified receipts (#720)", () => {
@@ -107,5 +111,31 @@ describe("color_correct verified receipts (#720)", () => {
     const state = host();
     await expect(tool.handler({ node_id: "c1", exposure: 0 })).resolves.toMatchObject({ success: true, data: { colorCorrected: true, verified: true, renderVerified: false, changes: { exposure: 0 } } });
     expect(state.property.setValue).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("exact and animated Lumetri control", () => {
+  it("refuses repeated effects without an explicit index before any write", async () => {
+    const state = host({ existing: true, repeated: true });
+    await expect(tool.handler({ node_id: "c1", exposure: 1 })).resolves.toMatchObject({ success: false });
+    expect(state.property.setValue).not.toHaveBeenCalled();
+    expect(state.secondProperty.setValue).not.toHaveBeenCalled();
+  });
+  it("changes only the selected Lumetri instance", async () => {
+    const state = host({ existing: true, repeated: true });
+    await expect(tool.handler({ node_id: "c1", effect_index: 1, exposure: 1 })).resolves.toMatchObject({ success: true, data: { effectIndex: 1, changes: { exposure: 1 } } });
+    expect(state.property.setValue).not.toHaveBeenCalled();
+    expect(state.secondProperty.setValue).toHaveBeenCalledOnce();
+  });
+  it("does not insert an effect when an explicit index is stale", async () => {
+    const state = host();
+    await expect(tool.handler({ node_id: "c1", effect_index: 2, exposure: 1 })).resolves.toMatchObject({ success: false });
+    expect(state.add).not.toHaveBeenCalled();
+  });
+  it("refuses an animated requested control before any static write", async () => {
+    const state = host({ existing: true, animated: true });
+    await expect(tool.handler({ node_id: "c1", exposure: 1 })).resolves.toMatchObject({ success: false, data: { timelineChanged: false } });
+    expect(state.property.setValue).not.toHaveBeenCalled();
   });
 });
