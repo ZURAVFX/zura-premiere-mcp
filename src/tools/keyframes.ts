@@ -23,20 +23,42 @@ function propertyIndexError(propertyIndex: number | undefined): string | null {
     : null;
 }
 
+// Component indices come from list_clip_effects; names alone cannot identify repeated effects.
+function effectLookupScript(args: { effect_name: string; effect_index?: number }): string {
+  return `
+          var effectName = "${escapeForExtendScript(args.effect_name)}";
+          var effectIndex = ${args.effect_index === undefined ? "null" : args.effect_index};
+          var comp = null;
+          var matches = [];
+          for (var i = 0; i < clip.components.numItems; i++) {
+            if (clip.components[i].displayName === effectName || clip.components[i].matchName === effectName) matches.push(i);
+          }
+          if (effectIndex !== null) {
+            if (effectIndex >= clip.components.numItems) return __error("effect_index is out of range; inspect list_clip_effects again.");
+            comp = clip.components[effectIndex];
+            if (comp.displayName !== effectName && comp.matchName !== effectName) return __error("effect_index does not match effect_name; inspect list_clip_effects again. Nothing was changed.");
+          } else {
+            if (matches.length > 1) return __error("Effect name is ambiguous at component indices [" + matches.join(", ") + "]; pass effect_index from list_clip_effects. Nothing was changed.");
+            if (matches.length === 1) { effectIndex = matches[0]; comp = clip.components[effectIndex]; }
+          }
+          if (!comp) return __error("Effect not found: " + effectName);`;
+}
+
+function effectIndexParameter() {
+  return { type: "integer" as const, minimum: 0, description: "Exact component index from list_clip_effects. Required for repeated effect names; the index must still match effect_name." };
+}
+
+function effectIndexError(index: number | undefined): string | null {
+  return index !== undefined && (!Number.isSafeInteger(index) || index < 0) ? "effect_index must be a non-negative safe integer." : null;
+}
+
 // Find clip, component and one unambiguous property. get_effect_properties returns indices.
-function propertyLookupScript(args: { node_id: string; effect_name: string; property_name: string; property_index?: number }): string {
+function propertyLookupScript(args: { node_id: string; effect_name: string; effect_index?: number; property_name: string; property_index?: number }): string {
   return `
           var result = __findClip("${escapeForExtendScript(args.node_id)}");
           if (!result) return __error("Clip not found");
           var clip = result.clip;
-          var comp = null;
-          for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === "${escapeForExtendScript(args.effect_name)}" || clip.components[i].matchName === "${escapeForExtendScript(args.effect_name)}") {
-              comp = clip.components[i];
-              break;
-            }
-          }
-          if (!comp) return __error("Effect not found");
+          ${effectLookupScript(args)}
           var resolvedProperty = __resolveProperty(comp, "${escapeForExtendScript(args.property_name)}", ${args.property_index === undefined ? "null" : args.property_index});
           if (resolvedProperty.error) return __error(resolvedProperty.error);
           var prop = resolvedProperty.property;
@@ -63,7 +85,7 @@ function keyBaseScript(times: Array<[string, number]>): string {
 export function getKeyframeTools(bridgeOptions: BridgeOptions) {
   return {
     get_effect_properties: {
-      description: "List all properties of a specific effect on a clip, including current values",
+      description: "List properties of one effect instance, including values and property indices. Repeated effect names require effect_index from list_clip_effects",
       parameters: {
         type: "object" as const,
         properties: {
@@ -71,6 +93,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect (e.g., 'Motion', 'Opacity', 'Lumetri Color')",
@@ -78,23 +101,15 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         },
         required: ["node_id", "effect_name"],
       },
-      handler: async (args: { node_id: string; effect_name: string }) => {
+      handler: async (args: { node_id: string; effect_name: string; effect_index?: number }) => {
+        const indexError = effectIndexError(args.effect_index);
+        if (indexError) return { success: false, error: indexError };
         const script = buildToolScript(`
           var result = __findClip("${escapeForExtendScript(args.node_id)}");
           if (!result) return __error("Clip not found");
           
           var clip = result.clip;
-          var effectName = "${escapeForExtendScript(args.effect_name)}";
-          var comp = null;
-          
-          for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === effectName || clip.components[i].matchName === effectName) {
-              comp = clip.components[i];
-              break;
-            }
-          }
-          
-          if (!comp) return __error("Effect not found: " + effectName);
+          ${effectLookupScript(args)}
           
           var props = [];
           for (var p = 0; p < comp.properties.numItems; p++) {
@@ -124,6 +139,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           
           return __result({
             effect: comp.displayName,
+            effectIndex: effectIndex,
             matchName: comp.matchName,
             properties: props
           });
@@ -134,7 +150,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
 
     set_effect_property: {
       description:
-        "Set one effect property. Duplicate names require property_index from get_effect_properties. Colour values use [alpha, red, green, blue] and the lossless colour API; keyframed writes are refused. Readback reports verified, failed or committed_unverified; unreadable values are never reported as applied.",
+        "Set one effect property. Repeated effect instances require effect_index from list_clip_effects; duplicate property names require property_index from get_effect_properties. Colour values use [alpha, red, green, blue] and the lossless colour API; keyframed writes are refused. Readback reports verified, failed or committed_unverified; unreadable values are never reported as applied.",
       parameters: {
         type: "object" as const,
         properties: {
@@ -142,6 +158,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect (e.g., 'Motion', 'Opacity')",
@@ -164,8 +181,8 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         },
         required: ["node_id", "effect_name", "property_name", "value"],
       },
-      handler: async (args: { node_id: string; effect_name: string; property_name: string; property_index?: number; value: number | string | boolean | number[] | Record<string, unknown> }) => {
-        const indexError = propertyIndexError(args.property_index);
+      handler: async (args: { node_id: string; effect_name: string; effect_index?: number; property_name: string; property_index?: number; value: number | string | boolean | number[] | Record<string, unknown> }) => {
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         if (Array.isArray(args.value)) {
           if (!args.value.length || args.value.length > 4) {
@@ -189,14 +206,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           if (!result) return __error("Clip not found");
           
           var clip = result.clip;
-          var comp = null;
-          for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === "${escapeForExtendScript(args.effect_name)}" || clip.components[i].matchName === "${escapeForExtendScript(args.effect_name)}") {
-              comp = clip.components[i];
-              break;
-            }
-          }
-          if (!comp) return __error("Effect not found: ${escapeForExtendScript(args.effect_name)}");
+          ${effectLookupScript(args)}
           
           var resolvedProperty = __resolveProperty(comp, "${escapeForExtendScript(args.property_name)}", ${args.property_index === undefined ? "null" : args.property_index});
           if (resolvedProperty.error) return __error(resolvedProperty.error);
@@ -216,10 +226,10 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             try { prop.setColorValue(requestedValue[0], requestedValue[1], requestedValue[2], requestedValue[3], true); }
             catch (colorWriteError) { return __error("Premiere could not set the requested colour property: " + colorWriteError.toString()); }
             var colorReadback = __readColorValue(prop);
-            if (!colorReadback) return __result({ set: null, valueType: "color_argb", effect: "${escapeForExtendScript(args.effect_name)}", property: "${escapeForExtendScript(args.property_name)}", propertyIndex: resolvedProperty.index, value: null, requestedValue: requestedValue, appliedValue: null, readbackVerified: false, verified: false, outcome: "committed_unverified", verification: "Colour write returned but lossless readback is unavailable; verify rendered output before delivery." });
+            if (!colorReadback) return __result({ set: null, valueType: "color_argb", effect: "${escapeForExtendScript(args.effect_name)}", property: "${escapeForExtendScript(args.property_name)}", effectIndex: effectIndex, propertyIndex: resolvedProperty.index, value: null, requestedValue: requestedValue, appliedValue: null, readbackVerified: false, verified: false, outcome: "committed_unverified", verification: "Colour write returned but lossless readback is unavailable; verify rendered output before delivery." });
             var colorVerified = true;
             for (var colorReadIndex = 0; colorReadIndex < 4; colorReadIndex++) if (Math.abs(colorReadback[colorReadIndex] - requestedValue[colorReadIndex]) > 1) colorVerified = false;
-            var colorData = { set: colorVerified, effect: "${escapeForExtendScript(args.effect_name)}", property: "${escapeForExtendScript(args.property_name)}", propertyIndex: resolvedProperty.index, value: colorReadback, requestedValue: requestedValue, appliedValue: colorReadback, valueType: "color_argb", readbackVerified: colorVerified, verified: colorVerified, outcome: colorVerified ? "verified" : "failed", verification: "Premiere parameter readback only; verify rendered output before delivery." };
+            var colorData = { set: colorVerified, effect: "${escapeForExtendScript(args.effect_name)}", property: "${escapeForExtendScript(args.property_name)}", effectIndex: effectIndex, propertyIndex: resolvedProperty.index, value: colorReadback, requestedValue: requestedValue, appliedValue: colorReadback, valueType: "color_argb", readbackVerified: colorVerified, verified: colorVerified, outcome: colorVerified ? "verified" : "failed", verification: "Premiere parameter readback only; verify rendered output before delivery." };
             if (!colorVerified) return __error("Premiere colour readback does not match the requested value.", colorData);
             return __result(colorData);
           }
@@ -269,7 +279,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             appliedValue: readbackAvailable ? readbackValue : null,
             effect: "${escapeForExtendScript(args.effect_name)}",
             property: "${escapeForExtendScript(args.property_name)}",
-            propertyIndex: resolvedProperty.index,
+            effectIndex: effectIndex, propertyIndex: resolvedProperty.index,
             value: readbackAvailable ? readbackValue : null,
             requestedValue: requestedValue,
             readbackVerified: readbackAvailable && __sameParameterValue(readbackValue, requestedValue),
@@ -293,6 +303,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -305,22 +316,15 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         },
         required: ["node_id", "effect_name", "property_name"],
       },
-      handler: async (args: { node_id: string; effect_name: string; property_name: string; property_index?: number }) => {
-        const indexError = propertyIndexError(args.property_index);
+      handler: async (args: { node_id: string; effect_name: string; effect_index?: number; property_name: string; property_index?: number }) => {
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const script = buildToolScript(`
           var result = __findClip("${escapeForExtendScript(args.node_id)}");
           if (!result) return __error("Clip not found");
           
           var clip = result.clip;
-          var comp = null;
-          for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === "${escapeForExtendScript(args.effect_name)}" || clip.components[i].matchName === "${escapeForExtendScript(args.effect_name)}") {
-              comp = clip.components[i];
-              break;
-            }
-          }
-          if (!comp) return __error("Effect not found");
+          ${effectLookupScript(args)}
           
           var resolvedProperty = __resolveProperty(comp, "${escapeForExtendScript(args.property_name)}", ${args.property_index === undefined ? "null" : args.property_index});
           if (resolvedProperty.error) return __error(resolvedProperty.error);
@@ -374,6 +378,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -396,13 +401,13 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
       },
       handler: async (args: {
         node_id: string;
-        effect_name: string;
+        effect_name: string; effect_index?: number;
         property_name: string;
         property_index?: number;
         time_seconds: number;
         value: number;
       }) => {
-        const indexError = propertyIndexError(args.property_index);
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const invalid = keyframeArgumentError(args, ["time_seconds"], "value");
         if (invalid) return { success: false, error: invalid };
@@ -417,14 +422,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
           var outsideVisibleRange = isFinite(clipDurationTicks)
             ? (requestedKeyTicks < 0 || requestedKeyTicks >= clipDurationTicks)
             : null;
-          var comp = null;
-          for (var i = 0; i < clip.components.numItems; i++) {
-            if (clip.components[i].displayName === "${escapeForExtendScript(args.effect_name)}" || clip.components[i].matchName === "${escapeForExtendScript(args.effect_name)}") {
-              comp = clip.components[i];
-              break;
-            }
-          }
-          if (!comp) return __error("Effect not found");
+          ${effectLookupScript(args)}
           
           var resolvedProperty = __resolveProperty(comp, "${escapeForExtendScript(args.property_name)}", ${args.property_index === undefined ? "null" : args.property_index});
           if (resolvedProperty.error) return __error(resolvedProperty.error);
@@ -485,6 +483,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -501,8 +500,8 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         },
         required: ["node_id", "effect_name", "property_name", "time_seconds"],
       },
-      handler: async (args: { node_id: string; effect_name: string; property_name: string; property_index?: number; time_seconds: number }) => {
-        const indexError = propertyIndexError(args.property_index);
+      handler: async (args: { node_id: string; effect_name: string; effect_index?: number; property_name: string; property_index?: number; time_seconds: number }) => {
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const invalid = keyframeArgumentError(args, ["time_seconds"]);
         if (invalid) return { success: false, error: invalid };
@@ -550,6 +549,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -572,13 +572,13 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
       },
       handler: async (args: {
         node_id: string;
-        effect_name: string;
+        effect_name: string; effect_index?: number;
         property_name: string;
         property_index?: number;
         start_seconds: number;
         end_seconds: number;
       }) => {
-        const indexError = propertyIndexError(args.property_index);
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const invalid = keyframeArgumentError(args, ["start_seconds", "end_seconds"]);
         if (invalid) return { success: false, error: invalid };
@@ -641,6 +641,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -664,13 +665,13 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
       },
       handler: async (args: {
         node_id: string;
-        effect_name: string;
+        effect_name: string; effect_index?: number;
         property_name: string;
         property_index?: number;
         time_seconds: number;
         interpolation: string;
       }) => {
-        const indexError = propertyIndexError(args.property_index);
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const invalid = keyframeArgumentError(args, ["time_seconds"]);
         if (invalid) return { success: false, error: invalid };
@@ -714,6 +715,7 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
             type: "string",
             description: "Node ID of the clip",
           },
+          effect_index: effectIndexParameter(),
           effect_name: {
             type: "string",
             description: "Display name of the effect",
@@ -730,8 +732,8 @@ export function getKeyframeTools(bridgeOptions: BridgeOptions) {
         },
         required: ["node_id", "effect_name", "property_name", "time_seconds"],
       },
-      handler: async (args: { node_id: string; effect_name: string; property_name: string; property_index?: number; time_seconds: number }) => {
-        const indexError = propertyIndexError(args.property_index);
+      handler: async (args: { node_id: string; effect_name: string; effect_index?: number; property_name: string; property_index?: number; time_seconds: number }) => {
+        const indexError = effectIndexError(args.effect_index) || propertyIndexError(args.property_index);
         if (indexError) return { success: false, error: indexError };
         const invalid = keyframeArgumentError(args, ["time_seconds"]);
         if (invalid) return { success: false, error: invalid };

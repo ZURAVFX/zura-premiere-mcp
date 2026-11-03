@@ -1385,6 +1385,9 @@ function __exportStillFrame(outputPath, ticks) {
   var seq = app.project.activeSequence;
   if (!seq) return { ok: false, error: "No active sequence", notes: [] };
 
+  // Native QE exporters reject URI-style Windows paths even when File accepts them.
+  outputPath = new File(outputPath).fsName;
+
   var notes = [];
   var atTicks = ticks;
   if (!atTicks) {

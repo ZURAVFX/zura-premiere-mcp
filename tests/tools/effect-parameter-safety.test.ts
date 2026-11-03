@@ -189,3 +189,50 @@ describe("lossless colour and duplicate effect parameters", () => {
     expect(missing.error).toContain("first 25 of 30");
   });
 });
+
+
+describe("exact effect instance selection", () => {
+  function repeatedHost() {
+    const first = parameter("Amount", { value: 10 });
+    const second = parameter("Amount", { value: 20 });
+    const state = host([first], { displayName: "Blur", matchName: "ADBE Blur" });
+    state.clip.components.push({ displayName: "Blur", matchName: "ADBE Blur", properties: collection([second]) });
+    return { first, second };
+  }
+
+  it("refuses ambiguous names for inspection and every keyframe operation before writes", async () => {
+    const { first, second } = repeatedHost();
+    const calls = ["get_effect_properties", "set_effect_property", "get_keyframes", "add_keyframe", "remove_keyframe", "remove_keyframe_range", "set_keyframe_interpolation", "get_value_at_time"] as const;
+    for (const name of calls) {
+      const result = await (keyframes[name].handler as Function)({ node_id: "clip", effect_name: "Blur", property_name: "Amount", value: 50, time_seconds: 1, start_seconds: 0, end_seconds: 2, interpolation: "linear" });
+      expect(result).toMatchObject({ success: false, error: expect.stringContaining("pass effect_index") });
+    }
+    expect(first.setValue).not.toHaveBeenCalled();
+    expect(second.setValue).not.toHaveBeenCalled();
+    expect(first.addKey).not.toHaveBeenCalled();
+    expect(second.removeKey).not.toHaveBeenCalled();
+  });
+
+  it("reads and changes only the selected instance, by display or match name", async () => {
+    const { first, second } = repeatedHost();
+    await expect(keyframes.get_effect_properties.handler({ node_id: "clip", effect_name: "Blur", effect_index: 1 })).resolves.toMatchObject({ success: true, data: { effectIndex: 1, properties: [{ value: 20 }] } });
+    await expect(keyframes.set_effect_property.handler({ node_id: "clip", effect_name: "ADBE Blur", effect_index: 1, property_name: "Amount", value: 50 })).resolves.toMatchObject({ success: true, data: { effectIndex: 1, value: 50, verified: true } });
+    expect(first.setValue).not.toHaveBeenCalled();
+    expect(second.setValue).toHaveBeenCalledWith(50, true);
+    await expect(keyframes.get_value_at_time.handler({ node_id: "clip", effect_name: "Blur", effect_index: 1, property_name: "Amount", time_seconds: 1 })).resolves.toMatchObject({ success: true, data: { value: 50 } });
+  });
+
+  it("rejects stale names and out of range indices without changing another effect", async () => {
+    const { first, second } = repeatedHost();
+    for (const args of [{ effect_name: "Motion", effect_index: 1 }, { effect_name: "Blur", effect_index: 9 }]) {
+      await expect(keyframes.set_effect_property.handler({ node_id: "clip", property_name: "Amount", value: 50, ...args })).resolves.toMatchObject({ success: false });
+    }
+    expect(first.setValue).not.toHaveBeenCalled();
+    expect(second.setValue).not.toHaveBeenCalled();
+  });
+
+  it.each([-1, 0.5, NaN, Infinity, 9007199254740992, '1;throw 1'])("rejects invalid indices %s before the bridge", async (effect_index) => {
+    await expect(keyframes.get_effect_properties.handler({ node_id: "clip", effect_name: "Blur", effect_index: effect_index as number })).resolves.toMatchObject({ success: false });
+    expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+});

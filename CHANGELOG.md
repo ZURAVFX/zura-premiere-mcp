@@ -1,3 +1,11 @@
+## [1.27.0] - 2026-11-03
+
+- Select exact repeated effect instances for CEP property and keyframe reads/writes; refuse ambiguous or stale selectors.
+- Preserve native adjustment-layer template creation and add explicit source-clip reuse plus consistent clip/source identity fields.
+- Reject unreadable adjustment-layer duration readback instead of reporting success.
+- Expose complete effect and keyframe editing routes in the reels tool pack.
+- Normalise Windows still-frame export paths before passing them to the native QE exporter.
+
 ## [1.26.0] - 2026-10-31
 
 Integrated local person matting with automatic model/runtime preparation. Reels includes Lumetri, effect copying and export-range controls. Fixed framing schema validation, adjustment-layer preflight and current API regression fixtures.

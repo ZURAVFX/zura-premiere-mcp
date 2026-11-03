@@ -431,10 +431,11 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
 
     add_adjustment_layer: {
       description:
-        "Add an adjustment layer at the playhead. Reuse a verified adjustment-layer source or automatically import the bundled media-free native template into the open project, then use public overwriteClip. Legacy QE creation is host-dependent. Refuses occupied placement and never opens UI. Read back layer type and timing.",
+        "Add an adjustment layer at the playhead. Reuse a verified adjustment-layer source or automatically import the bundled media-free native template into the open project, then use public overwriteClip. Legacy QE creation is host-dependent. Refuses occupied placement and never opens UI. Read back layer type and timing. source_node_id selects an exact existing layer. Use clipNodeId for effect edits and projectItemNodeId for the source item.",
       parameters: {
         type: "object" as const,
         properties: {
+          source_node_id: { type: "string", minLength: 1, description: "Optional exact existing adjustment-layer clip node ID in the active sequence. Reuses that source, refusing ordinary clips or missing IDs; cannot be combined with template fields." },
           template_project_path: { type: "string", description: "Optional local .prproj containing a real adjustment layer. Imported into the currently open project, never opened as another project. Requires template_sequence_id." },
           template_sequence_id: { type: "string", description: "Sequence ID inside template_project_path. Both template fields must be supplied together." },
           duration_seconds: { type: "number", description: "Optional frame-aligned layer duration in seconds. Defaults to one second for the template/reuse route." },
@@ -444,10 +445,12 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
           },
         },
       },
-      handler: async (args: { track_index?: number; template_project_path?: string; template_sequence_id?: string; duration_seconds?: number }) => {
+      handler: async (args: { source_node_id?: string; track_index?: number; template_project_path?: string; template_sequence_id?: string; duration_seconds?: number }) => {
         const track = args.track_index ?? 0;
         if (!Number.isSafeInteger(track) || track < 0) return { success: false, error: "track_index must be a non-negative integer." };
         if (Boolean(args.template_project_path) !== Boolean(args.template_sequence_id)) return { success: false, error: "Supply template_project_path and template_sequence_id together." };
+        if (args.source_node_id !== undefined && (typeof args.source_node_id !== "string" || !args.source_node_id.trim())) return { success: false, error: "source_node_id must be a non-empty clip ID." };
+        if (args.source_node_id && args.template_project_path) return { success: false, error: "Choose source_node_id or a template, not both." };
         const duration = args.duration_seconds ?? 1;
         if (!Number.isFinite(duration) || duration <= 0) return { success: false, error: "duration_seconds must be positive and finite." };
         const preflight = await sendCommand(buildToolScript(`
@@ -523,7 +526,14 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
             }
             return null;
           }
-          var source = ${args.template_project_path ? "null" : "__findAdjustmentSource()"};
+          var source = ${args.template_project_path || args.source_node_id ? "null" : "__findAdjustmentSource()"};
+          ${args.source_node_id === undefined ? "" : `
+          var selectedSource = __findClip("${escapeForExtendScript(args.source_node_id)}");
+          if (!selectedSource) return __error("Source adjustment-layer clip not found; nothing was added.");
+          try { if (selectedSource.clip.isAdjustmentLayer() !== true || !selectedSource.clip.projectItem) return __error("Source clip is not a verified adjustment layer; nothing was added."); }
+          catch (sourceError) { return __error("Cannot verify source adjustment-layer identity; nothing was added."); }
+          source = selectedSource.clip.projectItem;
+          `}
           var importedTemplate = false;
           if (!source && "${templatePath}") {
             var templateFile = new File("${templatePath}");
@@ -552,8 +562,8 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
             var placed = __layerAtPlayhead(String(source.nodeId));
             if (!placed) return __error("Placement returned without a verified adjustment layer. Inspect before retrying.", { outcome: "committed_unverified", verified: false });
             var actualEnd = parseFloat(placed.end.ticks);
-            if (Math.abs(actualEnd - playerTicks - durationTicks) > frameTicks / 100) return __error("Adjustment layer exists but duration readback differs. Inspect before retrying.", { outcome: "committed_unverified", verified: false, nodeId: String(placed.nodeId) });
-            return __result({ added: true, verified: true, method: "verified-source + public overwriteClip", importedTemplate: importedTemplate, trackIndex: ${track}, nodeId: String(placed.nodeId), projectItemId: String(source.nodeId), startSeconds: playerTicks / TICKS_PER_SECOND, durationSeconds: ${duration} });
+            if (!isFinite(actualEnd) || Math.abs(actualEnd - playerTicks - durationTicks) > frameTicks / 100) return __error("Adjustment layer exists but duration readback differs. Inspect before retrying.", { outcome: "committed_unverified", verified: false, clipNodeId: String(placed.nodeId), projectItemNodeId: String(source.nodeId), nodeId: String(placed.nodeId) });
+            return __result({ added: true, verified: true, method: "verified-source + public overwriteClip", importedTemplate: importedTemplate, trackIndex: ${track}, nodeId: String(placed.nodeId), clipNodeId: String(placed.nodeId), projectItemNodeId: String(source.nodeId), projectItemId: String(source.nodeId), startSeconds: playerTicks / TICKS_PER_SECOND, durationSeconds: ${duration} });
           }
 
           app.enableQE();
@@ -562,10 +572,11 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
           // Path 1: optional host-dependent QE creation.
           if (typeof qeSeq.addAdjustmentLayer === "function") {
             try { qeSeq.addAdjustmentLayer(${track}); } catch (eLegacy) { return __error("Adjustment layer creation was attempted and threw: " + eLegacy.toString() + ". Inspect before retrying.", { outcome: "failed", mutationAttempted: true, mutationOutcome: "unknown", verified: false, timelineChanged: null }); }
-            if (!__layerAtPlayhead(null)) {
+            var legacyLayer = __layerAtPlayhead(null);
+            if (!legacyLayer) {
               return __jsonStringify({ success: false, error: "qeSeq.addAdjustmentLayer returned, but no new adjustment layer was found at the playhead on video track ${track}.", data: { outcome: "committed_unverified", method: "qeSeq.addAdjustmentLayer" } });
             }
-            return __result({ added: true, verified: true, trackIndex: ${track}, method: "qeSeq.addAdjustmentLayer" });
+            return __result({ added: true, verified: true, trackIndex: ${track}, clipNodeId: String(legacyLayer.nodeId), projectItemNodeId: String(legacyLayer.projectItem.nodeId), method: "qeSeq.addAdjustmentLayer" });
           }
 
           // Path 2 (PPro 2026): create a project-level adjustment layer, then
@@ -592,10 +603,11 @@ export function getUtilityTools(bridgeOptions: BridgeOptions) {
           } catch (eInsert) {
             return __error("Adjustment layer insertion was attempted and threw: " + eInsert.toString() + ". The project or timeline may have changed; inspect before retrying.", { outcome: "failed", mutationAttempted: true, mutationOutcome: "unknown", verified: false, timelineChanged: null, projectItem: adjItem.name });
           }
-          if (!__layerAtPlayhead(String(adjItem.nodeId))) {
+          var newLayer = __layerAtPlayhead(String(adjItem.nodeId));
+          if (!newLayer) {
             return __jsonStringify({ success: false, error: "Premiere accepted the insert, but the new adjustment layer was not found at the playhead on video track ${track}.", data: { outcome: "committed_unverified", projectItem: adjItem.name, method: "qe.project.newAdjustmentLayer + insert" } });
           }
-          return __result({ added: true, verified: true, trackIndex: ${track}, projectItem: adjItem.name, nodeId: String(adjItem.nodeId), method: "qe.project.newAdjustmentLayer + insert" });
+          return __result({ added: true, verified: true, trackIndex: ${track}, projectItem: adjItem.name, nodeId: String(adjItem.nodeId), clipNodeId: String(newLayer.nodeId), projectItemNodeId: String(adjItem.nodeId), method: "qe.project.newAdjustmentLayer + insert" });
         `);
         return sendCommand(script, bridgeOptions);
       },

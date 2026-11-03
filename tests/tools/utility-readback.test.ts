@@ -202,3 +202,51 @@ describe("add_adjustment_layer", () => {
     await expect(run(tools.add_adjustment_layer, { track_index: 5 })).resolves.toMatchObject({ success: false, error: expect.stringContaining("out of range") });
   });
 });
+
+
+describe("explicit adjustment-layer reuse and receipts", () => {
+  function reuseHost(options: { ordinary?: boolean; invalidEnd?: boolean; throwPlacement?: boolean } = {}) {
+    let sourceIn = 2, sourceOut = 5;
+    const item = { nodeId: "source-item", name: "Layer", getInPoint: () => ({ seconds: sourceIn }), getOutPoint: () => ({ seconds: sourceOut }), setInPoint: (v: number) => { sourceIn = v; }, setOutPoint: (v: number) => { sourceOut = v; } };
+    const target: Record<string, any>[] = [];
+    const source = { nodeId: "source-clip", projectItem: item, isAdjustmentLayer: () => !options.ordinary };
+    const overwrite = vi.fn(() => {
+      target.push({ nodeId: "placed-clip", projectItem: item, start: { ticks: String(10 * TICKS) }, end: { ticks: options.invalidEnd ? "unreadable" : String((10 + sourceOut - sourceIn) * TICKS) }, isAdjustmentLayer: () => true });
+      if (options.throwPlacement) throw new Error("after placement");
+    });
+    const seq = { sequenceID: "test-sequence", timebase: String(TICKS / 25), getSettings: () => ({ videoFrameWidth: 1920, videoFrameHeight: 1080 }), getPlayerPosition: () => ({ ticks: String(10 * TICKS) }), videoTracks: { numTracks: 2, 0: { clips: children(target), isLocked: () => false, overwriteClip: overwrite }, 1: { clips: children([source]), isLocked: () => false } }, audioTracks: { numTracks: 0 } };
+    useContext({ Time: class { seconds = 0; }, app: { project: { activeSequence: seq, sequences: { numSequences: 0 } } } });
+    return { overwrite, marks: () => [sourceIn, sourceOut] };
+  }
+
+  it("places the selected source and returns distinct timeline and project IDs", async () => {
+    const state = reuseHost();
+    await expect(run(tools.add_adjustment_layer, { source_node_id: "source-clip", duration_seconds: 3 })).resolves.toMatchObject({ success: true, data: { clipNodeId: "placed-clip", projectItemNodeId: "source-item", durationSeconds: 3, verified: true } });
+    expect(state.overwrite).toHaveBeenCalledTimes(1);
+    expect(state.marks()).toEqual([2, 5]);
+  });
+
+  it("never verifies a non-finite duration readback", async () => {
+    reuseHost({ invalidEnd: true });
+    await expect(run(tools.add_adjustment_layer, { source_node_id: "source-clip", duration_seconds: 3 })).resolves.toMatchObject({ success: false, data: { clipNodeId: "placed-clip", outcome: "committed_unverified", verified: false } });
+  });
+
+  it("restores source marks after a throwing placement without retrying", async () => {
+    const state = reuseHost({ throwPlacement: true });
+    await expect(run(tools.add_adjustment_layer, { source_node_id: "source-clip", duration_seconds: 3 })).resolves.toMatchObject({ success: false, data: { outcome: "committed_unverified" } });
+    expect(state.overwrite).toHaveBeenCalledTimes(1);
+    expect(state.marks()).toEqual([2, 5]);
+  });
+
+  it("refuses an ordinary source and treats script-shaped IDs as opaque text", async () => {
+    const state = reuseHost({ ordinary: true });
+    await expect(run(tools.add_adjustment_layer, { source_node_id: "source-clip" })).resolves.toMatchObject({ success: false, error: expect.stringContaining("not a verified adjustment layer") });
+    await expect(run(tools.add_adjustment_layer, { source_node_id: 'bad\"; throw new Error(\"injected\"); //' })).resolves.toMatchObject({ success: false, error: expect.stringContaining("not found") });
+    expect(state.overwrite).not.toHaveBeenCalled();
+  });
+
+  it("rejects conflicting source/template selectors before contacting Premiere", async () => {
+    await expect(run(tools.add_adjustment_layer, { source_node_id: "source-clip", template_project_path: "/tmp/template.prproj", template_sequence_id: "template" })).resolves.toMatchObject({ success: false });
+    expect(mockedSendCommand).not.toHaveBeenCalled();
+  });
+});

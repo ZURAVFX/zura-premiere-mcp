@@ -12,18 +12,19 @@ const TICKS = 254016000000;
  * exporter that mimics Premiere 25.2: it cuts the output name at the first
  * dot, so "shot-12.5s" is written as "shot-12.png".
  */
-function run(requestedPath: string) {
+function run(requestedPath: string, windows = false) {
   const files = new Map<string, number>();
+  const separator = (path: string) => Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   class File {
     fsName: string;
-    constructor(path: string) { this.fsName = path; }
-    get name() { return encodeURI(this.fsName.substring(this.fsName.lastIndexOf("/") + 1)); }
+    constructor(path: string) { this.fsName = windows ? path.replaceAll("/", "\\") : path; }
+    get name() { return encodeURI(this.fsName.substring(separator(this.fsName) + 1)); }
     get exists() { return files.has(this.fsName); }
     get length() { return files.get(this.fsName) ?? 0; }
     get parent() { return null; }
     remove() { files.delete(this.fsName); return true; }
     rename(name: string) {
-      const target = this.fsName.substring(0, this.fsName.lastIndexOf("/") + 1) + name;
+      const target = this.fsName.substring(0, separator(this.fsName) + 1) + name;
       files.set(target, files.get(this.fsName) ?? 0);
       files.delete(this.fsName);
       this.fsName = target;
@@ -33,7 +34,8 @@ function run(requestedPath: string) {
   const qeSeq = {
     name: "Sweep",
     exportFramePNG(_timecode: string, base: string) {
-      const slash = base.lastIndexOf("/");
+      if (windows && base.includes("/")) throw new Error("Native exporter requires Windows paths");
+      const slash = separator(base);
       const name = base.substring(slash + 1);
       const cut = name.indexOf(".") >= 0 ? name.substring(0, name.indexOf(".")) : name;
       files.set(base.substring(0, slash + 1) + cut + ".png", 1024);
@@ -55,6 +57,11 @@ function run(requestedPath: string) {
 }
 
 describe("export_frame file names", () => {
+  it("normalises slash-style Windows paths before calling the native exporter", () => {
+    const { result, files } = run("C:/Users/me/frames/frame.png", true);
+    expect(result).toMatchObject({ ok: true, method: "qe", path: "C:\\Users\\me\\frames\\frame.png" });
+    expect(files).toEqual(["C:\\Users\\me\\frames\\frame.png"]);
+  });
   it("writes exactly the requested name when it contains dots, via the QE fast path", () => {
     const { result, files } = run("/Users/me/frames/shot-12.5s.png");
     expect(result).toMatchObject({ ok: true, method: "qe", path: "/Users/me/frames/shot-12.5s.png" });

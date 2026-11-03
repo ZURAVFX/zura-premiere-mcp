@@ -23,6 +23,10 @@ export function buildPremiereInstructions(registeredTools: ReadonlySet<string>):
     "Retrieve native transcript evidence when this UXP backend is connected. Preserve source timing and speaker evidence; do not infer speech from filenames.");
   route(["plan_filler_word_removal"],
     "Hesitation-sound removal needs a transcript that preserves disfluencies, such as Premiere transcription or verbatim ASR; Whisper's default output omits 'um' and 'uh'. Check transcript provenance before treating an empty match as evidence that no hesitation sounds occurred.");
+  route(["list_clip_effects", "get_effect_properties", "set_effect_property"],
+    "Discover the current effect stack first. Pass effect_index for repeated effect names and property_index for repeated property names; indices can change after stack edits. Use the same effect_index for keyframe reads and writes. Parameter readback verifies stored values, not rendered output.");
+  route(["add_adjustment_layer"],
+    "Place at the current playhead on the intended video track with a frame-aligned duration_seconds. A bundled media-free native template supplies a real adjustment layer when none exists; source_node_id selects an exact existing adjustment-layer clip in the active sequence. Reuse copies its source, not its clip effects. Use clipNodeId for effects and timeline edits and projectItemNodeId for the source. Inspect committed_unverified results before retrying.");
   route(["set_clip_duration"],
     "Set a placed clip's timeline length or extend a still image by moving only its end; it refuses overlaps with the next clip and restores the original end if Premiere clamps. Clip speed has no documented scripting setter, so speed_change and set_clip_speed_qe always fail before mutation; use set_clip_duration for timing, or the Speed/Duration UI to retime.");
   route(["capture_frame"],
