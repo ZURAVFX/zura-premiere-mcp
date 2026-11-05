@@ -1,3 +1,8 @@
+## [1.28.1] - 2026-11-05
+
+- Route managed updates through the public Zura Premiere Reels plugin and migrate retired OA installations using verified public source. Never execute the retired private updater.
+- Point setup instructions and the landing page to the public Reels repository.
+
 ## [1.28.0] - 2026-11-03
 
 - Add a source updater that preserves working checkouts, verifies the remote commit and routes OA-managed installs through the complete private integration updater. Add a concise shared install prompt and public landing page.
